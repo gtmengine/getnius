@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
       throw new Error(`Exa API error: ${exaResponse.status}`)
     }
 
+    // Wait until response arrives
     const exaData = await exaResponse.json()
 
     // Transform Exa results to our Company format
