@@ -165,6 +165,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.1.6(@types/react@19.1.8)
+      mimic:
+        specifier: ^2.0.9
+        version: 2.0.9
       postcss:
         specifier: ^8.5
         version: 8.5.6
@@ -1441,6 +1444,9 @@ packages:
   micromatch@4.0.8:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
+
+  mimic@2.0.9:
+    resolution: {integrity: sha512-9l3dnDztx2XJFIoo8+D6ybmeFQlG0ObCij2Lae6qd707vm37bAO+x9HqW6SyT3tUfG/b4i3Y5b5R8ve9EF+c0w==}
 
   minimatch@9.0.5:
     resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
@@ -3094,6 +3100,8 @@ snapshots:
     dependencies:
       braces: 3.0.3
       picomatch: 2.3.1
+
+  mimic@2.0.9: {}
 
   minimatch@9.0.5:
     dependencies:
