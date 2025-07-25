@@ -36,6 +36,8 @@ const MarketIntelligenceTool = React.memo(() => {
   const [expandedResults, setExpandedResults] = useState(false)
   const [companies, setCompanies] = useState<Company[]>([])
   const [showExamples, setShowExamples] = useState(true)
+  const [customCategory, setCustomCategory] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   // Handle search input changes
   const handleSearchChange = useCallback((value: string) => {
@@ -167,10 +169,13 @@ const MarketIntelligenceTool = React.memo(() => {
       {/* Search Categories */}
       <div className="flex justify-center">
         <div className="flex bg-gray-100 rounded-lg p-1">
-          {["People", "Companies", "Research Papers", "Articles", "Products", "Other"].map((category) => (
+          {["People", "Companies", "Research Papers", "Articles", "Products"].map((category) => (
             <button
               key={category}
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => {
+                setSelectedCategory(category);
+                setShowCustomInput(false);
+              }}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 selectedCategory === category ? "bg-blue-600 text-white" : "text-gray-600 hover:text-gray-900"
               }`}
@@ -178,6 +183,43 @@ const MarketIntelligenceTool = React.memo(() => {
               {category}
             </button>
           ))}
+          {showCustomInput ? (
+            <input
+              autoFocus
+              type="text"
+              className="px-4 py-2 rounded-md text-sm font-medium border outline-none w-32"
+              placeholder="Your entity..."
+              value={customCategory}
+              onChange={e => setCustomCategory(e.target.value)}
+              onBlur={() => {
+                if (customCategory.trim()) {
+                  setSelectedCategory(customCategory.trim());
+                }
+                setShowCustomInput(false);
+              }}
+              onKeyDown={e => {
+                if (e.key === "Enter" && customCategory.trim()) {
+                  setSelectedCategory(customCategory.trim());
+                  setShowCustomInput(false);
+                }
+              }}
+            />
+          ) : (
+            <button
+              key="Other"
+              onClick={() => {
+                setShowCustomInput(true);
+                setCustomCategory("");
+              }}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                !["People", "Companies", "Research Papers", "Articles", "Products"].includes(selectedCategory)
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {!["People", "Companies", "Research Papers", "Articles", "Products"].includes(selectedCategory) ? selectedCategory : "Other"}
+            </button>
+          )}
         </div>
       </div>
 
