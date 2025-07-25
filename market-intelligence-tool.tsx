@@ -125,6 +125,36 @@ const MarketIntelligenceTool = React.memo(() => {
     [handleExampleSelect],
   )
 
+  // Handle export
+  const handleExport = useCallback(() => {
+    if (!searchResults.length) return;
+    const headers = [
+      'Company', 'Source', 'Website', 'Employees', 'Funding', 'Location', 'Status'
+    ];
+    const rows = searchResults.map(company => [
+      company.name,
+      company.source,
+      company.website,
+      company.employees,
+      company.funding,
+      company.location,
+      company.relevance || 'Pending',
+    ]);
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(field => `"${(field ?? '').toString().replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'enriched_market_list.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [searchResults]);
+
   // Search Screen Component
   const SearchScreen = () => (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -415,7 +445,7 @@ const MarketIntelligenceTool = React.memo(() => {
             <p className="text-gray-600 mt-1">Add valuable data points to your validated list</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2">
+            <button onClick={handleExport} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2">
               <Download className="w-4 h-4" />
               Export
             </button>
