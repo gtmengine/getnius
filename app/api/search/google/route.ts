@@ -8,6 +8,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 })
     }
 
+    // Check if API keys are available
+    if (!process.env.GOOGLE_API_KEY || !process.env.GOOGLE_SEARCH_ENGINE_ID) {
+      console.log("Google API keys not found, returning empty results")
+      return NextResponse.json({ companies: [] })
+    }
+
     // Google Custom Search API call
     const searchQuery = `${query} company startup business site:linkedin.com OR site:crunchbase.com OR site:angel.co`
     const googleResponse = await fetch(

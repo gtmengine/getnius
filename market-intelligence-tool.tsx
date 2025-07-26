@@ -51,7 +51,7 @@ const MarketIntelligenceTool = React.memo(() => {
     setShowExamples(false)
     // Auto-search when suggestion is selected
     setTimeout(() => handleSearch(suggestion.text), 50)
-  }, [])
+  }, [handleSearch])
 
   // Handle example selection
   const handleExampleSelect = useCallback((query: string) => {
@@ -59,10 +59,10 @@ const MarketIntelligenceTool = React.memo(() => {
     setShowExamples(false)
     // Auto-search when example is selected
     setTimeout(() => handleSearch(query), 100)
-  }, [])
+  }, [handleSearch])
 
   // Handle search execution
-  const handleSearch = async (queryOverride?: string) => {
+  const handleSearch = useCallback(async (queryOverride?: string) => {
     const query = queryOverride || searchQuery
     if (!query.trim()) return
 
@@ -84,7 +84,7 @@ const MarketIntelligenceTool = React.memo(() => {
     } finally {
       setIsSearching(false)
     }
-  }
+  }, [searchQuery])
 
   // Handle relevance feedback
   const handleRelevanceFeedback = useCallback(

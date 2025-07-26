@@ -8,6 +8,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 })
     }
 
+    // Check if API key is available
+    if (!process.env.FIRECRAWL_API_KEY) {
+      console.log("Firecrawl API key not found, using fallback search")
+      return await fallbackSearch(query)
+    }
+
     // Updated Firecrawl API v1 call with search endpoint
     const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
       method: "POST",

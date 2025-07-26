@@ -136,6 +136,25 @@ export async function getSmartSuggestions(query: string): Promise<SearchSuggesti
 
 // Combined search across all APIs
 export async function searchCompanies(query: string): Promise<Company[]> {
+  // Try alternative search first as it's most reliable without API keys
+  try {
+    const alternativeResponse = await fetch("/api/search/alternative", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    })
+
+    if (alternativeResponse.ok) {
+      const alternativeData = await alternativeResponse.json()
+      if (alternativeData.companies && alternativeData.companies.length > 0) {
+        return alternativeData.companies
+      }
+    }
+  } catch (error) {
+    console.error("Alternative search failed:", error)
+  }
+
+  // Fallback to other APIs if alternative search fails
   const [firecrawlResults, googleResults, exaResults] = await Promise.allSettled([
     searchWithFirecrawl(query),
     searchWithGoogle(query),
