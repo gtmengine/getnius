@@ -56,7 +56,8 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const suggestionsRef = useRef<HTMLDivElement>(null) // <-- Add this ref
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null) // Initialize as null
 
   // DEBUG: Log mount/unmount and value
   useEffect(() => {
@@ -224,12 +225,22 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
   }, [suggestions.length])
 
   const handleBlur = useCallback(() => {
-    // Delay to allow click events
-    setTimeout(() => setShowSuggestions(false), 150)
-  }, [])
+    requestAnimationFrame(() => {
+      // Check if focus moved to another element within our component
+      const activeElement = document.activeElement;
+      if (
+        suggestionsRef.current &&
+        activeElement &&
+        !suggestionsRef.current.contains(activeElement) &&
+        activeElement !== inputRef.current
+      ) {
+        setShowSuggestions(false);
+      }
+    });
+  }, []);
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} ref={suggestionsRef}>
       <div className="relative">
         <input
           ref={inputRef}

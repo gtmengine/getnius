@@ -84,7 +84,11 @@ const MarketIntelligenceTool = React.memo(() => {
     } finally {
       setIsSearching(false)
     }
+<<<<<<< HEAD
   }, [searchQuery])
+=======
+}, [searchQuery]);
+>>>>>>> 03348cae0bd2685183fb9acf242cba3c67696b80
 
   // Handle relevance feedback
   const handleRelevanceFeedback = useCallback(
