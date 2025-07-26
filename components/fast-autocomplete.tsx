@@ -58,6 +58,24 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
   const inputRef = useRef<HTMLInputElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout>()
 
+  // DEBUG: Log mount/unmount and value
+  useEffect(() => {
+    console.log("[FastAutocomplete] MOUNT", { value });
+    return () => {
+      console.log("[FastAutocomplete] UNMOUNT");
+    };
+  }, []);
+  useEffect(() => {
+    console.log("[FastAutocomplete] RENDER", { value });
+  });
+
+  // DEBUG: Log focus
+  useEffect(() => {
+    if (document.activeElement === inputRef.current) {
+      console.log("[FastAutocomplete] input is focused");
+    }
+  });
+
   // Fast suggestion generation with memoization
   const generateSuggestions = useCallback((query: string): AutocompleteSuggestion[] => {
     if (!query || query.length < 2) return []
