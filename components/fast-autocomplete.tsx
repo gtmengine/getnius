@@ -56,7 +56,8 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const suggestionsRef = useRef<HTMLDivElement>(null) // <-- Add this ref
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null) // Initialize as null
 
   // Fast suggestion generation with memoization
   const generateSuggestions = useCallback((query: string): AutocompleteSuggestion[] => {
@@ -206,12 +207,16 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
   }, [suggestions.length])
 
   const handleBlur = useCallback(() => {
-    // Delay to allow click events
-    setTimeout(() => setShowSuggestions(false), 150)
-  }, [])
+    // Use requestAnimationFrame instead of setTimeout
+    requestAnimationFrame(() => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(document.activeElement)) {
+        setShowSuggestions(false);
+      }
+    });
+  }, []);
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} ref={suggestionsRef}>
       <div className="relative">
         <input
           ref={inputRef}

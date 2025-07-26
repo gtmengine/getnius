@@ -62,7 +62,7 @@ const MarketIntelligenceTool = React.memo(() => {
   }, [])
 
   // Handle search execution
-  const handleSearch = async (queryOverride?: string) => {
+  const handleSearch = useCallback(async (queryOverride?: string) => {
     const query = queryOverride || searchQuery
     if (!query.trim()) return
 
@@ -84,7 +84,22 @@ const MarketIntelligenceTool = React.memo(() => {
     } finally {
       setIsSearching(false)
     }
-  }
+}, [searchQuery]);
+
+// Memoize FastAutocomplete to prevent unnecessary re-renders
+const memoizedAutocomplete = useMemo(() => (
+  <FastAutocomplete
+    value={searchQuery}
+    onChange={handleSearchChange}
+    onSelect={handleSuggestionSelect}
+    placeholder={
+      searchQuery.length > 0
+        ? `Searching for "${searchQuery}"...`
+        : "Enter a request ... (e.g., AI meeting transcription tools)"
+    }
+    className="flex-1"
+  />
+), [searchQuery, handleSearchChange, handleSuggestionSelect]);
 
   // Handle relevance feedback
   const handleRelevanceFeedback = useCallback(
@@ -226,6 +241,7 @@ const MarketIntelligenceTool = React.memo(() => {
       {/* Smart Search Input */}
       <div className="space-y-4">
         <div className="flex gap-4">
+          {memoizedAutocomplete}
           <FastAutocomplete
             value={searchQuery}
             onChange={handleSearchChange}
