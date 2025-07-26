@@ -86,21 +86,6 @@ const MarketIntelligenceTool = React.memo(() => {
     }
 }, [searchQuery]);
 
-// Memoize FastAutocomplete to prevent unnecessary re-renders
-const memoizedAutocomplete = useMemo(() => (
-  <FastAutocomplete
-    value={searchQuery}
-    onChange={handleSearchChange}
-    onSelect={handleSuggestionSelect}
-    placeholder={
-      searchQuery.length > 0
-        ? `Searching for "${searchQuery}"...`
-        : "Enter a request ... (e.g., AI meeting transcription tools)"
-    }
-    className="flex-1"
-  />
-), [searchQuery, handleSearchChange, handleSuggestionSelect]);
-
   // Handle relevance feedback
   const handleRelevanceFeedback = useCallback(
     (companyId: string, isRelevant: boolean) => {
@@ -241,7 +226,6 @@ const memoizedAutocomplete = useMemo(() => (
       {/* Smart Search Input */}
       <div className="space-y-4">
         <div className="flex gap-4">
-          {memoizedAutocomplete}
           <FastAutocomplete
             value={searchQuery}
             onChange={handleSearchChange}

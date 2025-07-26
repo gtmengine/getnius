@@ -207,9 +207,15 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
   }, [suggestions.length])
 
   const handleBlur = useCallback(() => {
-    // Use requestAnimationFrame instead of setTimeout
     requestAnimationFrame(() => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(document.activeElement)) {
+      // Check if focus moved to another element within our component
+      const activeElement = document.activeElement;
+      if (
+        suggestionsRef.current &&
+        activeElement &&
+        !suggestionsRef.current.contains(activeElement) &&
+        activeElement !== inputRef.current
+      ) {
         setShowSuggestions(false);
       }
     });
