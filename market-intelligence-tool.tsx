@@ -39,28 +39,6 @@ const MarketIntelligenceTool = React.memo(() => {
   const [customCategory, setCustomCategory] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
 
-  // Handle search input changes
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value)
-    setShowExamples(value.length === 0)
-  }, [])
-
-  // Handle autocomplete suggestion selection
-  const handleSuggestionSelect = useCallback((suggestion: any) => {
-    setSearchQuery(suggestion.text)
-    setShowExamples(false)
-    // Auto-search when suggestion is selected
-    setTimeout(() => handleSearch(suggestion.text), 50)
-  }, [handleSearch])
-
-  // Handle example selection
-  const handleExampleSelect = useCallback((query: string) => {
-    setSearchQuery(query)
-    setShowExamples(false)
-    // Auto-search when example is selected
-    setTimeout(() => handleSearch(query), 100)
-  }, [handleSearch])
-
   // Handle search execution
   const handleSearch = useCallback(async (queryOverride?: string) => {
     const query = queryOverride || searchQuery
@@ -84,11 +62,29 @@ const MarketIntelligenceTool = React.memo(() => {
     } finally {
       setIsSearching(false)
     }
-<<<<<<< HEAD
   }, [searchQuery])
-=======
-}, [searchQuery]);
->>>>>>> 03348cae0bd2685183fb9acf242cba3c67696b80
+
+  // Handle search input changes
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+    setShowExamples(value.length === 0)
+  }, [])
+
+  // Handle autocomplete suggestion selection
+  const handleSuggestionSelect = useCallback((suggestion: any) => {
+    setSearchQuery(suggestion.text)
+    setShowExamples(false)
+    // Auto-search when suggestion is selected
+    setTimeout(() => handleSearch(suggestion.text), 50)
+  }, [handleSearch])
+
+  // Handle example selection
+  const handleExampleSelect = useCallback((query: string) => {
+    setSearchQuery(query)
+    setShowExamples(false)
+    // Auto-search when example is selected
+    setTimeout(() => handleSearch(query), 100)
+  }, [handleSearch])
 
   // Handle relevance feedback
   const handleRelevanceFeedback = useCallback(
