@@ -53,10 +53,9 @@ const SUGGESTION_DATA = {
 
 export const FastAutocomplete = React.memo(({ value, onChange, onSelect, placeholder, className = "" }: FastAutocompleteProps) => {
   const [selectedIndex, setSelectedIndex] = useState(-1)
-  const [isFocused, setIsFocused] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Memoized suggestions to prevent unnecessary recalculations
   const suggestions = useMemo(() => {
@@ -135,10 +134,10 @@ export const FastAutocomplete = React.memo(({ value, onChange, onSelect, placeho
     return results.slice(0, maxResults)
   }, [value])
 
-  // Show suggestions when focused and have suggestions
-  const showSuggestions = isFocused && suggestions.length > 0
+  // Show suggestions when we have them and input is focused
+  const shouldShowSuggestions = showSuggestions && suggestions.length > 0
 
-  // Handle input change
+  // Handle input change - simple and direct
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value)
     setSelectedIndex(-1)
@@ -146,7 +145,7 @@ export const FastAutocomplete = React.memo(({ value, onChange, onSelect, placeho
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!showSuggestions) return
+    if (!shouldShowSuggestions) return
 
     switch (e.key) {
       case "ArrowDown":
@@ -161,59 +160,44 @@ export const FastAutocomplete = React.memo(({ value, onChange, onSelect, placeho
         e.preventDefault()
         if (selectedIndex >= 0) {
           onSelect(suggestions[selectedIndex])
-          setIsFocused(false)
+          setShowSuggestions(false)
         }
         break
       case "Escape":
-        setIsFocused(false)
+        setShowSuggestions(false)
         setSelectedIndex(-1)
         break
     }
-  }, [showSuggestions, suggestions, selectedIndex, onSelect])
+  }, [shouldShowSuggestions, suggestions, selectedIndex, onSelect])
 
-  // Handle focus
+  // Handle focus - show suggestions if we have them
   const handleFocus = useCallback(() => {
-    setIsFocused(true)
-    setSelectedIndex(-1)
-  }, [])
-
-  // Handle blur with delay to allow for suggestion clicks
-  const handleBlur = useCallback(() => {
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current)
+    if (suggestions.length > 0) {
+      setShowSuggestions(true)
     }
-    
-    blurTimeoutRef.current = setTimeout(() => {
-      const activeElement = document.activeElement
-      if (containerRef.current && activeElement && !containerRef.current.contains(activeElement)) {
-        setIsFocused(false)
-        setSelectedIndex(-1)
-      }
-    }, 100)
+  }, [suggestions.length])
+
+  // Handle blur - hide suggestions after a short delay
+  const handleBlur = useCallback(() => {
+    setTimeout(() => {
+      setShowSuggestions(false)
+      setSelectedIndex(-1)
+    }, 150)
   }, [])
 
   // Handle suggestion click
   const handleSuggestionClick = useCallback((suggestion: AutocompleteSuggestion) => {
     onSelect(suggestion)
-    setIsFocused(false)
+    setShowSuggestions(false)
     setSelectedIndex(-1)
-    // Keep focus on input
-    setTimeout(() => inputRef.current?.focus(), 10)
   }, [onSelect])
 
-  // Prevent focus loss when clicking on suggestions
-  const handleSuggestionMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-  }, [])
-
-  // Cleanup timeout on unmount
+  // Update suggestions visibility when suggestions change
   useEffect(() => {
-    return () => {
-      if (blurTimeoutRef.current) {
-        clearTimeout(blurTimeoutRef.current)
-      }
+    if (suggestions.length > 0 && document.activeElement === inputRef.current) {
+      setShowSuggestions(true)
     }
-  }, [])
+  }, [suggestions.length])
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
@@ -234,11 +218,8 @@ export const FastAutocomplete = React.memo(({ value, onChange, onSelect, placeho
       </div>
 
       {/* Suggestions dropdown */}
-      {showSuggestions && (
-        <div 
-          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"
-          onMouseDown={handleSuggestionMouseDown}
-        >
+      {shouldShowSuggestions && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
           <div className="p-2 border-b bg-gray-50">
             <div className="text-xs font-medium text-gray-600 flex items-center gap-1">
               <Search className="w-3 h-3" />
@@ -252,7 +233,6 @@ export const FastAutocomplete = React.memo(({ value, onChange, onSelect, placeho
               <button
                 key={suggestion.id}
                 onClick={() => handleSuggestionClick(suggestion)}
-                onMouseDown={handleSuggestionMouseDown}
                 className={`w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 transition-colors ${
                   selectedIndex === index ? "bg-blue-50 border-blue-200" : ""
                 }`}

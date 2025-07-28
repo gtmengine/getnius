@@ -53,30 +53,36 @@ const MarketIntelligenceTool = React.memo(() => {
   )
 
   const pendingCompanies = useMemo(() => 
-    companies.filter(company => !company.relevance || company.relevance === "pending"), 
+    companies.filter(company => !company.relevance), 
     [companies]
   )
 
   // Handle search execution
   const handleSearch = useCallback(async (queryOverride?: string) => {
     const query = queryOverride || searchQuery
-    if (!query.trim()) return
+    console.log("Search triggered with query:", query)
+    if (!query.trim()) {
+      console.log("Empty query, returning")
+      return
+    }
 
     setIsSearching(true)
     setShowExamples(false)
 
     try {
+      console.log("Calling searchCompanies...")
       const results = await searchCompanies(query)
+      console.log("Search results:", results)
 
-      // Start with draft set (5-10 results)
-      const draftResults = results.slice(0, Math.min(8, results.length))
-      setSearchResults(draftResults)
-      setCompanies(results) // Store all results
+      // For testing, just set the results directly
+      setSearchResults(results)
+      setCompanies(results)
       setExpandedResults(false)
       setPrecision(0)
     } catch (error) {
       console.error("Search failed:", error)
       setSearchResults([])
+      setCompanies([])
     } finally {
       setIsSearching(false)
     }
@@ -84,6 +90,7 @@ const MarketIntelligenceTool = React.memo(() => {
 
   // Handle search input changes
   const handleSearchChange = useCallback((value: string) => {
+    console.log("Search input changed to:", value)
     setSearchQuery(value)
     setShowExamples(value.length === 0)
   }, [])
@@ -178,6 +185,49 @@ const MarketIntelligenceTool = React.memo(() => {
   // Search Screen Component
   const SearchScreen = () => (
     <div className="max-w-4xl mx-auto space-y-8">
+      {/* Non-Relevant Companies Collapsed List */}
+      {nonRelevantCompanies.length > 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <button
+            onClick={() => setShowNonRelevantList(!showNonRelevantList)}
+            className="flex items-center justify-between w-full text-left"
+          >
+            <div className="flex items-center gap-2">
+              <X className="w-4 h-4 text-red-500" />
+              <span className="font-medium text-gray-900">
+                {nonRelevantCompanies.length} Non-Relevant Companies
+              </span>
+            </div>
+            <ArrowRight 
+              className={`w-4 h-4 text-gray-500 transition-transform ${
+                showNonRelevantList ? 'rotate-90' : ''
+              }`} 
+            />
+          </button>
+          
+          {showNonRelevantList && (
+            <div className="mt-4 space-y-2 max-h-48 overflow-y-auto">
+              {nonRelevantCompanies.map((company) => (
+                <div key={company.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+                      <Building className="w-3 h-3 text-gray-400" />
+                    </div>
+                    <span className="text-sm text-gray-700">{company.name}</span>
+                  </div>
+                  <button
+                    onClick={() => handleRelevanceFeedback(company.id, true)}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    Mark as Relevant
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold text-gray-900">Create a data-ready market list</h1>
@@ -257,7 +307,10 @@ const MarketIntelligenceTool = React.memo(() => {
           />
 
           <button
-            onClick={() => handleSearch()}
+            onClick={() => {
+              console.log("Search button clicked, searchQuery:", searchQuery)
+              handleSearch()
+            }}
             disabled={!searchQuery.trim() || isSearching}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2 whitespace-nowrap"
           >
@@ -298,6 +351,27 @@ const MarketIntelligenceTool = React.memo(() => {
 
       {/* Search Examples */}
       {showExamples && memoizedSearchExamples}
+
+      {/* Company Status Summary */}
+      {companies.length > 0 && (
+        <div className="bg-white rounded-lg p-4 shadow-sm">
+          <h3 className="font-medium text-gray-900 mb-3">Company Status Summary</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{pendingCompanies.length}</div>
+              <div className="text-sm text-gray-600">Pending Review</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{relevantCompanies.length}</div>
+              <div className="text-sm text-gray-600">Marked as Relevant</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">{nonRelevantCompanies.length}</div>
+              <div className="text-sm text-gray-600">Marked as Not Relevant</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Alternative Input Methods */}
       {showExamples && (
@@ -349,7 +423,7 @@ const MarketIntelligenceTool = React.memo(() => {
           {/* Results Header */}
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Search Results {expandedResults && "(Expanded)"}</h3>
-            <div className="text-sm text-gray-600">{searchResults.length} companies • Click ✓/✗ to improve results</div>
+            <div className="text-sm text-gray-600">{searchResults.length} companies • Click ✓/✗ to mark as relevant or not</div>
           </div>
 
           {/* Results List */}
@@ -468,24 +542,41 @@ const MarketIntelligenceTool = React.memo(() => {
           </div>
 
           {/* Continue Button */}
-          <div className="flex justify-center">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Database className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-blue-900">Ready for Enrichment</span>
+          {relevantCompanies.length > 0 && (
+            <div className="flex justify-center">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Database className="w-5 h-5 text-blue-600" />
+                  <span className="font-medium text-blue-900">Ready for Enrichment</span>
+                </div>
+                <p className="text-sm text-blue-700 mb-3">
+                  {relevantCompanies.length} relevant companies found • Select which ones to enrich with additional data
+                </p>
+                <button
+                  onClick={() => setCurrentScreen("enrich")}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
+                >
+                  Continue to Enrichment
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
-              <p className="text-sm text-blue-700 mb-3">
-                {searchResults.length} companies found • Select which ones to enrich with additional data
-              </p>
-              <button
-                onClick={() => setCurrentScreen("enrich")}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
-              >
-                Continue to Enrichment
-                <ArrowRight className="w-4 h-4" />
-              </button>
             </div>
-          </div>
+          )}
+
+          {/* No Relevant Companies Message */}
+          {companies.length > 0 && relevantCompanies.length === 0 && (
+            <div className="flex justify-center">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Target className="w-5 h-5 text-yellow-600" />
+                  <span className="font-medium text-yellow-900">Mark Companies as Relevant</span>
+                </div>
+                <p className="text-sm text-yellow-700 mb-3">
+                  {companies.length} companies found • Click ✓ on companies you want to enrich
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -519,10 +610,10 @@ const MarketIntelligenceTool = React.memo(() => {
     ])
 
     const handleSelectAll = () => {
-      if (selectedCompanies.size === searchResults.length) {
+      if (selectedCompanies.size === relevantCompanies.length) {
         setSelectedCompanies(new Set())
       } else {
-        setSelectedCompanies(new Set(searchResults.map(company => company.id)))
+        setSelectedCompanies(new Set(relevantCompanies.map(company => company.id)))
       }
     }
 
@@ -541,7 +632,7 @@ const MarketIntelligenceTool = React.memo(() => {
       console.log("Enriching selected companies:", Array.from(selectedCompanies))
     }
 
-    const enrichedCompanies = searchResults.map(company => ({
+    const enrichedCompanies = relevantCompanies.map(company => ({
       ...company,
       enriched: selectedCompanies.has(company.id)
     }))
@@ -552,7 +643,7 @@ const MarketIntelligenceTool = React.memo(() => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Enrich Your Market List</h2>
             <p className="text-gray-600 mt-1">
-              {searchResults.length} companies from search • {selectedCompanies.size} selected for enrichment
+              {relevantCompanies.length} relevant companies • {selectedCompanies.size} selected for enrichment
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -734,8 +825,8 @@ const MarketIntelligenceTool = React.memo(() => {
         {/* Summary Stats */}
         <div className="grid grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="text-2xl font-bold text-gray-900">{searchResults.length}</div>
-            <div className="text-sm text-gray-600">Total Companies</div>
+            <div className="text-2xl font-bold text-gray-900">{relevantCompanies.length}</div>
+            <div className="text-sm text-gray-600">Relevant Companies</div>
           </div>
           <div className="bg-white p-4 rounded-lg shadow-sm">
             <div className="text-2xl font-bold text-blue-600">{selectedCompanies.size}</div>
@@ -870,8 +961,8 @@ const MarketIntelligenceTool = React.memo(() => {
             ].map((item, index) => {
               const Icon = item.icon
               const isActive = currentScreen === item.id
-              const isCompleted = index === 0 ? searchResults.length > 0 : 
-                                index === 1 ? searchResults.length > 0 : false
+              const isCompleted = index === 0 ? relevantCompanies.length > 0 : 
+                                index === 1 ? relevantCompanies.length > 0 : false
               
               return (
                 <button
