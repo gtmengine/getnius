@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Search, Clock, Hash, MapPin, Building } from "lucide-react"
 
 interface AutocompleteSuggestion {
@@ -51,46 +51,27 @@ const SUGGESTION_DATA = {
   ],
 }
 
-export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, className = "" }: FastAutocompleteProps) => {
-  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
+export const FastAutocomplete = React.memo(({ value, onChange, onSelect, placeholder, className = "" }: FastAutocompleteProps) => {
   const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const suggestionsRef = useRef<HTMLDivElement>(null) // <-- Add this ref
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null) // Initialize as null
+  const containerRef = useRef<HTMLDivElement>(null)
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // DEBUG: Log mount/unmount and value
-  useEffect(() => {
-    console.log("[FastAutocomplete] MOUNT", { value });
-    return () => {
-      console.log("[FastAutocomplete] UNMOUNT");
-    };
-  }, []);
-  useEffect(() => {
-    console.log("[FastAutocomplete] RENDER", { value });
-  });
+  // Memoized suggestions to prevent unnecessary recalculations
+  const suggestions = useMemo(() => {
+    if (!value || value.length < 2) return []
 
-  // DEBUG: Log focus
-  useEffect(() => {
-    if (document.activeElement === inputRef.current) {
-      console.log("[FastAutocomplete] input is focused");
-    }
-  });
-
-  // Fast suggestion generation with memoization
-  const generateSuggestions = useCallback((query: string): AutocompleteSuggestion[] => {
-    if (!query || query.length < 2) return []
-
-    const suggestions: AutocompleteSuggestion[] = []
-    const queryLower = query.toLowerCase()
+    const results: AutocompleteSuggestion[] = []
+    const queryLower = value.toLowerCase()
     const maxResults = 6
 
-    // 1. Recent searches (immediate)
+    // 1. Recent searches
     SUGGESTION_DATA.recent
       .filter((search) => search.toLowerCase().includes(queryLower))
       .slice(0, 2)
       .forEach((search, index) => {
-        suggestions.push({
+        results.push({
           id: `recent-${index}`,
           text: search,
           type: "recent",
@@ -99,11 +80,11 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
         })
       })
 
-    // 2. Ontology matches (fast lookup)
+    // 2. Ontology matches
     for (const [key, synonyms] of Object.entries(SUGGESTION_DATA.ontologyMap)) {
-      if (queryLower.includes(key) && suggestions.length < maxResults) {
+      if (queryLower.includes(key) && results.length < maxResults) {
         synonyms.slice(0, 2).forEach((synonym, index) => {
-          suggestions.push({
+          results.push({
             id: `ontology-${key}-${index}`,
             text: synonym,
             type: "ontology",
@@ -112,19 +93,19 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
             icon: Hash,
           })
         })
-        break // Only one ontology match for speed
+        break
       }
     }
 
-    // 3. Location completions (if applicable)
-    if ((queryLower.includes("in ") || queryLower.includes("at ")) && suggestions.length < maxResults) {
+    // 3. Location completions
+    if ((queryLower.includes("in ") || queryLower.includes("at ")) && results.length < maxResults) {
       SUGGESTION_DATA.locations
-        .filter((loc) => !query.includes(loc))
+        .filter((loc) => !value.includes(loc))
         .slice(0, 2)
         .forEach((location, index) => {
-          suggestions.push({
+          results.push({
             id: `location-${index}`,
-            text: `${query} ${location}`,
+            text: `${value} ${location}`,
             type: "location",
             category: "Location",
             icon: MapPin,
@@ -133,15 +114,15 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
     }
 
     // 4. Quick completions
-    if (suggestions.length < maxResults) {
+    if (results.length < maxResults) {
       const lastWord = queryLower.split(" ").pop() || ""
       SUGGESTION_DATA.completions
         .filter((comp) => comp.startsWith(lastWord) && comp !== lastWord)
         .slice(0, 2)
         .forEach((completion, index) => {
-          const words = query.split(" ")
+          const words = value.split(" ")
           words[words.length - 1] = completion
-          suggestions.push({
+          results.push({
             id: `completion-${index}`,
             text: words.join(" "),
             type: "completion",
@@ -151,102 +132,97 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
         })
     }
 
-    return suggestions.slice(0, maxResults)
+    return results.slice(0, maxResults)
+  }, [value])
+
+  // Show suggestions when focused and have suggestions
+  const showSuggestions = isFocused && suggestions.length > 0
+
+  // Handle input change
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value)
+    setSelectedIndex(-1)
+  }, [onChange])
+
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!showSuggestions) return
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault()
+        setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev))
+        break
+      case "ArrowUp":
+        e.preventDefault()
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1))
+        break
+      case "Enter":
+        e.preventDefault()
+        if (selectedIndex >= 0) {
+          onSelect(suggestions[selectedIndex])
+          setIsFocused(false)
+        }
+        break
+      case "Escape":
+        setIsFocused(false)
+        setSelectedIndex(-1)
+        break
+    }
+  }, [showSuggestions, suggestions, selectedIndex, onSelect])
+
+  // Handle focus
+  const handleFocus = useCallback(() => {
+    setIsFocused(true)
+    setSelectedIndex(-1)
   }, [])
 
-  // Ultra-fast debounced suggestions (50ms)
-  useEffect(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-
-    if (value.length >= 2) {
-      // Immediate suggestions for better UX
-      timeoutRef.current = setTimeout(() => {
-        const newSuggestions = generateSuggestions(value)
-        setSuggestions(newSuggestions)
-        setShowSuggestions(newSuggestions.length > 0 && document.activeElement === inputRef.current)
-        setSelectedIndex(-1)
-      }, 50) // Ultra-fast 50ms debounce
-    } else {
-      setSuggestions([])
-      setShowSuggestions(false)
-    }
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-    }
-  }, [value, generateSuggestions])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (!showSuggestions) return
-
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev))
-          break
-        case "ArrowUp":
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1))
-          break
-        case "Enter":
-          e.preventDefault()
-          if (selectedIndex >= 0) {
-            onSelect(suggestions[selectedIndex])
-            setShowSuggestions(false)
-          }
-          break
-        case "Escape":
-          setShowSuggestions(false)
-          setSelectedIndex(-1)
-          break
-      }
-    },
-    [showSuggestions, suggestions, selectedIndex, onSelect],
-  )
-
-  const handleSuggestionClick = useCallback(
-    (suggestion: AutocompleteSuggestion) => {
-      onSelect(suggestion)
-      setShowSuggestions(false)
-      inputRef.current?.focus()
-    },
-    [onSelect],
-  )
-
-  const handleFocus = useCallback(() => {
-    if (suggestions.length > 0) {
-      setShowSuggestions(true)
-    }
-  }, [suggestions.length])
-
+  // Handle blur with delay to allow for suggestion clicks
   const handleBlur = useCallback(() => {
-    requestAnimationFrame(() => {
-      // Check if focus moved to another element within our component
-      const activeElement = document.activeElement;
-      if (
-        suggestionsRef.current &&
-        activeElement &&
-        !suggestionsRef.current.contains(activeElement) &&
-        activeElement !== inputRef.current
-      ) {
-        setShowSuggestions(false);
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current)
+    }
+    
+    blurTimeoutRef.current = setTimeout(() => {
+      const activeElement = document.activeElement
+      if (containerRef.current && activeElement && !containerRef.current.contains(activeElement)) {
+        setIsFocused(false)
+        setSelectedIndex(-1)
       }
-    });
-  }, []);
+    }, 100)
+  }, [])
+
+  // Handle suggestion click
+  const handleSuggestionClick = useCallback((suggestion: AutocompleteSuggestion) => {
+    onSelect(suggestion)
+    setIsFocused(false)
+    setSelectedIndex(-1)
+    // Keep focus on input
+    setTimeout(() => inputRef.current?.focus(), 10)
+  }, [onSelect])
+
+  // Prevent focus loss when clicking on suggestions
+  const handleSuggestionMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+  }, [])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
-    <div className={`relative ${className}`} ref={suggestionsRef}>
+    <div className={`relative ${className}`} ref={containerRef}>
       <div className="relative">
         <input
           ref={inputRef}
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -257,9 +233,12 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
       </div>
 
-      {/* Fast suggestions dropdown */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+      {/* Suggestions dropdown */}
+      {showSuggestions && (
+        <div 
+          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"
+          onMouseDown={handleSuggestionMouseDown}
+        >
           <div className="p-2 border-b bg-gray-50">
             <div className="text-xs font-medium text-gray-600 flex items-center gap-1">
               <Search className="w-3 h-3" />
@@ -273,6 +252,7 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
               <button
                 key={suggestion.id}
                 onClick={() => handleSuggestionClick(suggestion)}
+                onMouseDown={handleSuggestionMouseDown}
                 className={`w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 transition-colors ${
                   selectedIndex === index ? "bg-blue-50 border-blue-200" : ""
                 }`}
@@ -308,6 +288,6 @@ export const FastAutocomplete = ({ value, onChange, onSelect, placeholder, class
       )}
     </div>
   )
-}
+})
 
 FastAutocomplete.displayName = "FastAutocomplete"

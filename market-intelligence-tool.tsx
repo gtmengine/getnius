@@ -21,6 +21,7 @@ import {
   Zap,
   ArrowRight,
   Loader2,
+  Plus,
 } from "lucide-react"
 import { searchCompanies, type Company } from "./lib/search-apis"
 import { SearchExamples } from "./components/search-examples"
@@ -38,6 +39,23 @@ const MarketIntelligenceTool = React.memo(() => {
   const [showExamples, setShowExamples] = useState(true)
   const [customCategory, setCustomCategory] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [showNonRelevantList, setShowNonRelevantList] = useState(false);
+
+  // Separate relevant and non-relevant companies
+  const relevantCompanies = useMemo(() => 
+    companies.filter(company => company.relevance === "relevant"), 
+    [companies]
+  )
+  
+  const nonRelevantCompanies = useMemo(() => 
+    companies.filter(company => company.relevance === "not_relevant"), 
+    [companies]
+  )
+
+  const pendingCompanies = useMemo(() => 
+    companies.filter(company => !company.relevance || company.relevance === "pending"), 
+    [companies]
+  )
 
   // Handle search execution
   const handleSearch = useCallback(async (queryOverride?: string) => {
@@ -451,13 +469,22 @@ const MarketIntelligenceTool = React.memo(() => {
 
           {/* Continue Button */}
           <div className="flex justify-center">
-            <button
-              onClick={() => setCurrentScreen("enrich")}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              Continue to Enrichment
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Database className="w-5 h-5 text-blue-600" />
+                <span className="font-medium text-blue-900">Ready for Enrichment</span>
+              </div>
+              <p className="text-sm text-blue-700 mb-3">
+                {searchResults.length} companies found • Select which ones to enrich with additional data
+              </p>
+              <button
+                onClick={() => setCurrentScreen("enrich")}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
+              >
+                Continue to Enrichment
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -479,22 +506,92 @@ const MarketIntelligenceTool = React.memo(() => {
 
   // Enrichment Screen Component
   const EnrichmentScreen = () => {
+    const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set())
+    const [enrichmentColumns, setEnrichmentColumns] = useState([
+      { id: "website", name: "Website", enabled: true },
+      { id: "employees", name: "Employee Count", enabled: true },
+      { id: "funding", name: "Total Funding", enabled: true },
+      { id: "location", name: "HQ Location", enabled: true },
+      { id: "industry", name: "Industry", enabled: false },
+      { id: "founded", name: "Founded Year", enabled: false },
+      { id: "email", name: "Contact Email", enabled: false },
+      { id: "phone", name: "Phone Number", enabled: false },
+    ])
+
+    const handleSelectAll = () => {
+      if (selectedCompanies.size === searchResults.length) {
+        setSelectedCompanies(new Set())
+      } else {
+        setSelectedCompanies(new Set(searchResults.map(company => company.id)))
+      }
+    }
+
+    const handleSelectCompany = (companyId: string) => {
+      const newSelected = new Set(selectedCompanies)
+      if (newSelected.has(companyId)) {
+        newSelected.delete(companyId)
+      } else {
+        newSelected.add(companyId)
+      }
+      setSelectedCompanies(newSelected)
+    }
+
+    const handleEnrichSelected = () => {
+      // Simulate enrichment process
+      console.log("Enriching selected companies:", Array.from(selectedCompanies))
+    }
+
+    const enrichedCompanies = searchResults.map(company => ({
+      ...company,
+      enriched: selectedCompanies.has(company.id)
+    }))
+
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Enrich Your Market List</h2>
-            <p className="text-gray-600 mt-1">Add valuable data points to your validated list</p>
+            <p className="text-gray-600 mt-1">
+              {searchResults.length} companies from search • {selectedCompanies.size} selected for enrichment
+            </p>
           </div>
           <div className="flex items-center gap-3">
+            <button 
+              onClick={handleEnrichSelected}
+              disabled={selectedCompanies.size === 0}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Enrich Selected ({selectedCompanies.size})
+            </button>
             <button onClick={handleExport} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2">
               <Download className="w-4 h-4" />
               Export
             </button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-              <Sparkles className="w-4 h-4" />
-              Find more
-            </button>
+          </div>
+        </div>
+
+        {/* Column Selection */}
+        <div className="bg-white rounded-lg p-4 shadow-sm">
+          <h3 className="font-medium text-gray-900 mb-3">Enrichment Columns</h3>
+          <div className="grid grid-cols-4 gap-3">
+            {enrichmentColumns.map((column) => (
+              <label key={column.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={column.enabled}
+                  onChange={(e) => {
+                    setEnrichmentColumns(prev => 
+                      prev.map(col => 
+                        col.id === column.id ? { ...col, enabled: e.target.checked } : col
+                      )
+                    )
+                  }}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm text-gray-700">{column.name}</span>
+              </label>
+            ))}
           </div>
         </div>
 
@@ -504,18 +601,36 @@ const MarketIntelligenceTool = React.memo(() => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
+                  <th className="px-4 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedCompanies.size === searchResults.length && searchResults.length > 0}
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300"
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Website</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employees</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Funding</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                  {enrichmentColumns.filter(col => col.enabled).map(column => (
+                    <th key={column.id} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      {column.name}
+                    </th>
+                  ))}
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {searchResults.slice(0, 10).map((company) => (
+                {enrichedCompanies.map((company) => (
                   <tr key={company.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedCompanies.has(company.id)}
+                        onChange={() => handleSelectCompany(company.id)}
+                        className="rounded border-gray-300"
+                      />
+                    </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         {company.logo ? (
@@ -553,44 +668,90 @@ const MarketIntelligenceTool = React.memo(() => {
                         {company.source}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-900">
-                      {company.website ? (
-                        <a
-                          href={company.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          {new URL(company.website).hostname}
-                        </a>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-900">{company.employees || "—"}</td>
-                    <td className="px-4 py-4 text-sm text-gray-900">{company.funding || "—"}</td>
-                    <td className="px-4 py-4 text-sm text-gray-900">{company.location || "—"}</td>
+                    {enrichmentColumns.filter(col => col.enabled).map(column => (
+                      <td key={column.id} className="px-4 py-4 text-sm text-gray-900">
+                        {column.id === "website" && company.website ? (
+                          <a
+                            href={company.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            {new URL(company.website).hostname}
+                          </a>
+                        ) : column.id === "employees" ? (
+                          company.employees || "—"
+                        ) : column.id === "funding" ? (
+                          company.funding || "—"
+                        ) : column.id === "location" ? (
+                          company.location || "—"
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    ))}
                     <td className="px-4 py-4">
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          company.relevance === "relevant"
+                          company.enriched
                             ? "bg-green-100 text-green-700"
-                            : company.relevance === "not_relevant"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-gray-100 text-gray-700"
+                            : company.relevance === "relevant"
+                              ? "bg-blue-100 text-blue-700"
+                              : company.relevance === "not_relevant"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-gray-100 text-gray-700"
                         }`}
                       >
-                        {company.relevance === "relevant"
-                          ? "Relevant"
-                          : company.relevance === "not_relevant"
-                            ? "Not Relevant"
-                            : "Pending"}
+                        {company.enriched ? "Enriched" : 
+                         company.relevance === "relevant" ? "Relevant" :
+                         company.relevance === "not_relevant" ? "Not Relevant" : "Pending"}
                       </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSelectCompany(company.id)}
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
+                          {selectedCompanies.has(company.id) ? (
+                            <Check className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <Plus className="w-4 h-4 text-gray-400" />
+                          )}
+                        </button>
+                        <button className="p-1 hover:bg-gray-100 rounded">
+                          <ExternalLink className="w-4 h-4 text-gray-400" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="text-2xl font-bold text-gray-900">{searchResults.length}</div>
+            <div className="text-sm text-gray-600">Total Companies</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="text-2xl font-bold text-blue-600">{selectedCompanies.size}</div>
+            <div className="text-sm text-gray-600">Selected for Enrichment</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="text-2xl font-bold text-green-600">
+              {enrichedCompanies.filter(c => c.enriched).length}
+            </div>
+            <div className="text-sm text-gray-600">Enriched</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="text-2xl font-bold text-gray-600">
+              {enrichmentColumns.filter(col => col.enabled).length}
+            </div>
+            <div className="text-sm text-gray-600">Active Columns</div>
           </div>
         </div>
 
@@ -605,7 +766,8 @@ const MarketIntelligenceTool = React.memo(() => {
           </button>
           <button
             onClick={() => setCurrentScreen("action")}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            disabled={selectedCompanies.size === 0}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2"
           >
             Take Action
             <ArrowRight className="w-4 h-4" />
@@ -705,20 +867,27 @@ const MarketIntelligenceTool = React.memo(() => {
               { id: "search", name: "Search", icon: Search },
               { id: "enrich", name: "Enrich", icon: Database },
               { id: "action", name: "Action", icon: Zap },
-            ].map((item) => {
+            ].map((item, index) => {
               const Icon = item.icon
+              const isActive = currentScreen === item.id
+              const isCompleted = index === 0 ? searchResults.length > 0 : 
+                                index === 1 ? searchResults.length > 0 : false
+              
               return (
                 <button
                   key={item.id}
                   onClick={() => setCurrentScreen(item.id)}
-                  className={`flex items-center gap-3 px-6 py-4 border-b-2 transition-colors ${
-                    currentScreen === item.id
+                  className={`flex items-center gap-3 px-6 py-4 border-b-2 transition-colors relative ${
+                    isActive
                       ? "border-blue-600 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span className="font-medium">{item.name}</span>
+                  {isCompleted && !isActive && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
+                  )}
                 </button>
               )
             })}
