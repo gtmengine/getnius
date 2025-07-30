@@ -272,13 +272,13 @@ const MarketIntelligenceTool = React.memo(() => {
                 }
                 setShowCustomInput(false);
               }}
-                             onKeyDown={e => {
-                 if (e.key === "Enter" && customCategory.trim()) {
-                   setSelectedCategory(customCategory.trim());
-                   setShowCustomInput(false);
-                 }
-               }}
-               tabIndex={9}
+              onKeyDown={e => {
+                if (e.key === "Enter" && customCategory.trim()) {
+                  setSelectedCategory(customCategory.trim());
+                  setShowCustomInput(false);
+                }
+              }}
+              tabIndex={8}
             />
           ) : (
             <button
@@ -292,7 +292,7 @@ const MarketIntelligenceTool = React.memo(() => {
                   ? "bg-blue-600 text-white"
                   : "text-gray-600 hover:text-gray-900"
               }`}
-              tabIndex={9}
+              tabIndex={8}
             >
               {!["People", "Companies", "Research Papers", "Articles", "Products"].includes(selectedCategory) ? selectedCategory : "Other"}
             </button>
@@ -303,25 +303,25 @@ const MarketIntelligenceTool = React.memo(() => {
       {/* Smart Search Input */}
       <div className="space-y-4">
         <div className="flex gap-4">
-                     <AutoCompleteSearch
-             value={searchQuery}
-             onChange={handleSearchChange}
-             onSelect={handleSuggestionSelect}
-             placeholder={
-               searchQuery.length > 0
-                 ? `Searching for "${searchQuery}"...`
-                 : "Enter a request ... (e.g., AI meeting transcription tools)"
+          <AutoCompleteSearch
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onSelect={handleSuggestionSelect}
+            placeholder={
+              searchQuery.length > 0
+                ? `Searching for "${searchQuery}"...`
+                : "Enter a request ... (e.g., AI meeting transcription tools)"
              }
              className="flex-1"
              tabIndex={1}
            />
 
-                     <button
-             onClick={() => {
-               if (searchQuery.trim()) {
-                 handleSearch(searchQuery)
-               }
-             }}
+          <button
+            onClick={() => {
+              if (searchQuery.trim()) {
+                handleSearch(searchQuery)
+              }
+            }}
              disabled={!searchQuery.trim() || isSearching}
              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2 whitespace-nowrap"
              tabIndex={2}
