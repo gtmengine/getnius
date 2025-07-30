@@ -61,6 +61,7 @@ const MarketIntelligenceTool = React.memo(() => {
   const handleSearch = useCallback(async (queryOverride?: string) => {
     const query = queryOverride || searchQuery
     console.log("Search triggered with query:", query)
+    console.log("Current searchQuery state:", searchQuery)
     if (!query.trim()) {
       console.log("Empty query, returning")
       return
@@ -75,6 +76,7 @@ const MarketIntelligenceTool = React.memo(() => {
       console.log("Search results:", results)
 
       if (results && results.length > 0) {
+        console.log("Setting search results:", results.length, "companies")
         setSearchResults(results)
         setCompanies(results)
         setExpandedResults(false)
@@ -319,8 +321,12 @@ const MarketIntelligenceTool = React.memo(() => {
           <button
             onClick={() => {
               console.log("Search button clicked, searchQuery:", searchQuery)
+              console.log("Search button disabled:", !searchQuery.trim() || isSearching)
               if (searchQuery.trim()) {
+                console.log("Calling handleSearch...")
                 handleSearch()
+              } else {
+                console.log("Search query is empty or whitespace")
               }
             }}
             disabled={!searchQuery.trim() || isSearching}
@@ -406,6 +412,32 @@ const MarketIntelligenceTool = React.memo(() => {
           </div>
         </div>
       )}
+
+      {/* Debug Info */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+        <h3 className="font-medium text-yellow-900 mb-2">Debug Info</h3>
+        <div className="text-sm text-yellow-800 space-y-1">
+          <div>Search Query: "{searchQuery}"</div>
+          <div>Search Results Count: {searchResults.length}</div>
+          <div>Companies Count: {companies.length}</div>
+          <div>Is Searching: {isSearching ? 'Yes' : 'No'}</div>
+          <div>Show Examples: {showExamples ? 'Yes' : 'No'}</div>
+        </div>
+        <div className="mt-3 space-x-2">
+          <button
+            onClick={() => handleSearch("AI meeting transcription tools")}
+            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+          >
+            Test Search: AI Tools
+          </button>
+          <button
+            onClick={() => handleSearch("fintech companies")}
+            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+          >
+            Test Search: Fintech
+          </button>
+        </div>
+      </div>
 
       {/* Search Results */}
       {searchResults.length > 0 && (
