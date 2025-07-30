@@ -18,6 +18,7 @@ interface AutoCompleteSearchProps {
   onSelect: (suggestion: AutocompleteSuggestion) => void
   placeholder?: string
   className?: string
+  tabIndex?: number
 }
 
 // Pre-computed suggestion data for better performance
@@ -64,7 +65,7 @@ function useDebounce(value: string, delay: number) {
   return debouncedValue
 }
 
-export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, placeholder, className = "" }: AutoCompleteSearchProps) => {
+export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, placeholder, className = "", tabIndex }: AutoCompleteSearchProps) => {
   const [results, setResults] = useState<AutocompleteSuggestion[]>([])
   const [isFocused, setIsFocused] = useState(false)
   const debouncedQuery = useDebounce(value, 300)
@@ -203,7 +204,7 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
           onBlur={handleBlur}
           autoComplete="off"
           onKeyDown={handleKeyDown}
-          tabIndex={1}
+          tabIndex={tabIndex || 1}
         />
         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
       </div>

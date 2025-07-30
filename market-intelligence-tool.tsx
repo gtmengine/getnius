@@ -93,10 +93,8 @@ const MarketIntelligenceTool = React.memo(() => {
     } finally {
       setIsSearching(false)
     }
-  }, [searchQuery])
+  }, [])
 
-  // TODO: this function triggers a cascade of events, which result
-  // in a focus loss of an input (which somehow DOES NOT HAVE THE TABINDEX)
   // Handle search input changes
   const handleSearchChange = useCallback((value: string) => {
     console.log("Search input changed to:", value)
@@ -110,7 +108,7 @@ const MarketIntelligenceTool = React.memo(() => {
     setShowExamples(false)
     // Auto-search when suggestion is selected
     setTimeout(() => handleSearch(suggestion.text), 50)
-  }, [handleSearch])
+  }, [])
 
   // Handle example selection
   const handleExampleSelect = useCallback((query: string) => {
@@ -118,7 +116,7 @@ const MarketIntelligenceTool = React.memo(() => {
     setShowExamples(false)
     // Auto-search when example is selected
     setTimeout(() => handleSearch(query), 100)
-  }, [handleSearch])
+  }, [])
 
   // Handle relevance feedback
   const handleRelevanceFeedback = useCallback(
@@ -306,33 +304,29 @@ const MarketIntelligenceTool = React.memo(() => {
       {/* Smart Search Input */}
       <div className="space-y-4">
         <div className="flex gap-4">
-          <AutoCompleteSearch
-            value={searchQuery}
-            onChange={handleSearchChange}
-            onSelect={handleSuggestionSelect}
-            placeholder={
-              searchQuery.length > 0
-                ? `Searching for "${searchQuery}"...`
-                : "Enter a request ... (e.g., AI meeting transcription tools)"
-            }
-            className="flex-1"
-          />
+                     <AutoCompleteSearch
+             value={searchQuery}
+             onChange={handleSearchChange}
+             onSelect={handleSuggestionSelect}
+             placeholder={
+               searchQuery.length > 0
+                 ? `Searching for "${searchQuery}"...`
+                 : "Enter a request ... (e.g., AI meeting transcription tools)"
+             }
+             className="flex-1"
+             tabIndex={1}
+           />
 
-          <button
-            onClick={() => {
-              console.log("Search button clicked, searchQuery:", searchQuery)
-              console.log("Search button disabled:", !searchQuery.trim() || isSearching)
-              if (searchQuery.trim()) {
-                console.log("Calling handleSearch...")
-                handleSearch()
-              } else {
-                console.log("Search query is empty or whitespace")
-              }
-            }}
-            disabled={!searchQuery.trim() || isSearching}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2 whitespace-nowrap"
-            tabIndex={2}
-          >
+                     <button
+             onClick={() => {
+               if (searchQuery.trim()) {
+                 handleSearch(searchQuery)
+               }
+             }}
+             disabled={!searchQuery.trim() || isSearching}
+             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2 whitespace-nowrap"
+             tabIndex={2}
+           >
             {isSearching ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -413,31 +407,7 @@ const MarketIntelligenceTool = React.memo(() => {
         </div>
       )}
 
-      {/* Debug Info */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-        <h3 className="font-medium text-yellow-900 mb-2">Debug Info</h3>
-        <div className="text-sm text-yellow-800 space-y-1">
-          <div>Search Query: "{searchQuery}"</div>
-          <div>Search Results Count: {searchResults.length}</div>
-          <div>Companies Count: {companies.length}</div>
-          <div>Is Searching: {isSearching ? 'Yes' : 'No'}</div>
-          <div>Show Examples: {showExamples ? 'Yes' : 'No'}</div>
-        </div>
-        <div className="mt-3 space-x-2">
-          <button
-            onClick={() => handleSearch("AI meeting transcription tools")}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-          >
-            Test Search: AI Tools
-          </button>
-          <button
-            onClick={() => handleSearch("fintech companies")}
-            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-          >
-            Test Search: Fintech
-          </button>
-        </div>
-      </div>
+      
 
       {/* Search Results */}
       {searchResults.length > 0 && (
