@@ -93,6 +93,8 @@ const MarketIntelligenceTool = React.memo(() => {
     }
   }, [searchQuery])
 
+  // TODO: this function triggers a cascade of events, which result
+  // in a focus loss of an input (which somehow DOES NOT HAVE THE TABINDEX)
   // Handle search input changes
   const handleSearchChange = useCallback((value: string) => {
     console.log("Search input changed to:", value)
