@@ -272,13 +272,13 @@ const MarketIntelligenceTool = React.memo(() => {
                 }
                 setShowCustomInput(false);
               }}
-              onKeyDown={e => {
-                if (e.key === "Enter" && customCategory.trim()) {
-                  setSelectedCategory(customCategory.trim());
-                  setShowCustomInput(false);
-                }
-              }}
-              tabIndex={8}
+                             onKeyDown={e => {
+                 if (e.key === "Enter" && customCategory.trim()) {
+                   setSelectedCategory(customCategory.trim());
+                   setShowCustomInput(false);
+                 }
+               }}
+               tabIndex={9}
             />
           ) : (
             <button
@@ -292,7 +292,7 @@ const MarketIntelligenceTool = React.memo(() => {
                   ? "bg-blue-600 text-white"
                   : "text-gray-600 hover:text-gray-900"
               }`}
-              tabIndex={8}
+              tabIndex={9}
             >
               {!["People", "Companies", "Research Papers", "Articles", "Products"].includes(selectedCategory) ? selectedCategory : "Other"}
             </button>

@@ -145,12 +145,51 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
 
   // Update results when debounced query changes
   useEffect(() => {
-    if (debouncedQuery) {
-      const suggestions = generateSuggestions(debouncedQuery)
-      setResults(suggestions)
-    } else {
-      setResults([])
+    const fetchSuggestions = async () => {
+      if (debouncedQuery && debouncedQuery.length >= 2) {
+        try {
+          const response = await fetch("/api/suggestions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: debouncedQuery }),
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            const apiSuggestions = data.suggestions || []
+            
+            // Convert API suggestions to the expected format
+            const formattedSuggestions = apiSuggestions.map((suggestion: any, index: number) => ({
+              id: `api-${index}`,
+              text: suggestion.text,
+              type: suggestion.type || "keyword",
+              category: suggestion.category || "API",
+              description: suggestion.description,
+            }))
+            
+            console.log(`Received ${formattedSuggestions.length} suggestions from API for "${debouncedQuery}"`)
+            console.log("Formatted suggestions:", formattedSuggestions.map((s: any) => s.text))
+            
+            setResults(formattedSuggestions)
+          } else {
+            // Fallback to local suggestions if API fails
+            const suggestions = generateSuggestions(debouncedQuery)
+            setResults(suggestions)
+          }
+        } catch (error) {
+          console.error("Failed to fetch suggestions:", error)
+          console.log("Falling back to local suggestions for:", debouncedQuery)
+          // Fallback to local suggestions
+          const suggestions = generateSuggestions(debouncedQuery)
+          console.log("Local suggestions:", suggestions.map(s => s.text))
+          setResults(suggestions)
+        }
+      } else {
+        setResults([])
+      }
     }
+
+    fetchSuggestions()
   }, [debouncedQuery, generateSuggestions])
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,6 +229,15 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
   }, [value, onSelect])
 
   const shouldShowResults = isFocused && results.length > 0
+  
+  // Debug logging
+  console.log("AutoCompleteSearch state:", {
+    isFocused,
+    resultsLength: results.length,
+    shouldShowResults,
+    value,
+    debouncedQuery
+  })
 
   return (
     <div className={`relative ${className}`}>

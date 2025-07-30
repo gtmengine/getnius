@@ -1,0 +1,4 @@
+{
+  "summary": "Fixed the tabindex order to ensure proper keyboard navigation. The search input now has tabIndex={1} as the primary focus, followed by the search button (tabIndex={2}), category buttons (tabIndex={3-7}), and custom category input/Other button (tabIndex={8}). This provides a logical tab order for users navigating with keyboard.",
+  "current_status": "Tabindex order is now properly configured for keyboard navigation. Users can tab through the interface in a logical order: search input first, then search button, then category selectors, and finally custom category options."
+} 

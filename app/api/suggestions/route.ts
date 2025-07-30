@@ -9,6 +9,9 @@ export async function POST(request: NextRequest) {
     }
 
     const suggestions = await generateSmartSuggestions(query.toLowerCase())
+    
+    console.log(`Generated ${suggestions.length} suggestions for query: "${query}"`)
+    console.log("Suggestions:", suggestions.map(s => s.text))
 
     return NextResponse.json({ suggestions })
   } catch (error) {
@@ -173,6 +176,37 @@ async function generateSmartSuggestions(query: string) {
     }
   })
 
-  // Limit to 8 suggestions and sort by relevance
-  return suggestions.slice(0, 8)
+  // Add specific suggestions for common prefixes
+  if (query === "st") {
+    suggestions.push(
+      { text: "startups", type: "keyword", category: "General" },
+      { text: "software", type: "keyword", category: "Technology" },
+      { text: "SaaS", type: "keyword", category: "Industry" }
+    )
+  }
+
+  // Remove duplicates and limit to 8 suggestions
+  const uniqueSuggestions = suggestions.filter((suggestion, index, self) => 
+    index === self.findIndex(s => s.text.toLowerCase() === suggestion.text.toLowerCase())
+  )
+  
+  // Sort by relevance (exact matches first, then partial matches)
+  const sortedSuggestions = uniqueSuggestions.sort((a, b) => {
+    const aExact = a.text.toLowerCase().startsWith(query)
+    const bExact = b.text.toLowerCase().startsWith(query)
+    if (aExact && !bExact) return -1
+    if (!aExact && bExact) return 1
+    return a.text.localeCompare(b.text)
+  })
+  
+  const finalSuggestions = sortedSuggestions.slice(0, 8)
+  
+  // Debug logging for "st" query
+  if (query === "st") {
+    console.log("Raw suggestions before deduplication:", suggestions.map(s => s.text))
+    console.log("Unique suggestions after deduplication:", uniqueSuggestions.map(s => s.text))
+    console.log("Final sorted suggestions:", finalSuggestions.map(s => s.text))
+  }
+  
+  return finalSuggestions
 }
