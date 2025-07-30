@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { AutoCompleteSearch } from "./components/auto-complete-search"
 import {
   Search,
   Download,
@@ -125,12 +126,13 @@ const MarketResearchPlatform = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Market Research Search</h2>
           <div className="flex gap-4">
             <div className="flex-1">
-              <input
-                type="text"
+              <AutoCompleteSearch
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(value) => setSearchQuery(value)}
+                onSelect={(suggestion) => setSearchQuery(suggestion.text)}
                 placeholder="Describe your target market..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                className="w-full"
+                tabIndex={1}
               />
             </div>
             <button
