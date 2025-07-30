@@ -74,11 +74,16 @@ const MarketIntelligenceTool = React.memo(() => {
       const results = await searchCompanies(query)
       console.log("Search results:", results)
 
-      // For testing, just set the results directly
-      setSearchResults(results)
-      setCompanies(results)
-      setExpandedResults(false)
-      setPrecision(0)
+      if (results && results.length > 0) {
+        setSearchResults(results)
+        setCompanies(results)
+        setExpandedResults(false)
+        setPrecision(0)
+      } else {
+        console.log("No results found")
+        setSearchResults([])
+        setCompanies([])
+      }
     } catch (error) {
       console.error("Search failed:", error)
       setSearchResults([])
@@ -237,7 +242,7 @@ const MarketIntelligenceTool = React.memo(() => {
       {/* Search Categories */}
       <div className="flex justify-center">
         <div className="flex bg-gray-100 rounded-lg p-1">
-          {["People", "Companies", "Research Papers", "Articles", "Products"].map((category) => (
+          {["People", "Companies", "Research Papers", "Articles", "Products"].map((category, index) => (
             <button
               key={category}
               onClick={() => {
@@ -247,6 +252,7 @@ const MarketIntelligenceTool = React.memo(() => {
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 selectedCategory === category ? "bg-blue-600 text-white" : "text-gray-600 hover:text-gray-900"
               }`}
+              tabIndex={3 + index}
             >
               {category}
             </button>
@@ -271,6 +277,7 @@ const MarketIntelligenceTool = React.memo(() => {
                   setShowCustomInput(false);
                 }
               }}
+              tabIndex={8}
             />
           ) : (
             <button
@@ -284,6 +291,7 @@ const MarketIntelligenceTool = React.memo(() => {
                   ? "bg-blue-600 text-white"
                   : "text-gray-600 hover:text-gray-900"
               }`}
+              tabIndex={8}
             >
               {!["People", "Companies", "Research Papers", "Articles", "Products"].includes(selectedCategory) ? selectedCategory : "Other"}
             </button>
@@ -309,10 +317,13 @@ const MarketIntelligenceTool = React.memo(() => {
           <button
             onClick={() => {
               console.log("Search button clicked, searchQuery:", searchQuery)
-              handleSearch()
+              if (searchQuery.trim()) {
+                handleSearch()
+              }
             }}
             disabled={!searchQuery.trim() || isSearching}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2 whitespace-nowrap"
+            tabIndex={2}
           >
             {isSearching ? (
               <>
@@ -341,6 +352,7 @@ const MarketIntelligenceTool = React.memo(() => {
                 key={index}
                 onClick={() => handleExampleSelect(completion)}
                 className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-sm transition-colors"
+                tabIndex={9 + index}
               >
                 {completion}
               </button>

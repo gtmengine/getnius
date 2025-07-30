@@ -153,7 +153,9 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
   }, [debouncedQuery, generateSuggestions])
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value)
+    const value = e.target.value
+    console.log("Search input changed to:", value)
+    onChange(value)
   }, [onChange])
 
   const handleFocus = useCallback(() => {
@@ -161,15 +163,30 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
   }, [])
 
   const handleBlur = useCallback(() => {
+    // Delay hiding results to allow for clicks
     setTimeout(() => {
       setIsFocused(false)
-    }, 150)
+    }, 200)
   }, [])
 
   const handleSuggestionClick = useCallback((suggestion: AutocompleteSuggestion) => {
+    console.log("Suggestion selected:", suggestion.text)
     onSelect(suggestion)
     setIsFocused(false)
   }, [onSelect])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && value.trim()) {
+      console.log("Enter pressed with value:", value)
+      onSelect({
+        id: `custom-${value}`,
+        text: value,
+        type: "completion",
+        category: "Custom",
+      })
+      setIsFocused(false)
+    }
+  }, [value, onSelect])
 
   const shouldShowResults = isFocused && results.length > 0
 
@@ -185,6 +202,8 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
           onFocus={handleFocus}
           onBlur={handleBlur}
           autoComplete="off"
+          onKeyDown={handleKeyDown}
+          tabIndex={1}
         />
         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
       </div>
