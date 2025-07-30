@@ -1,0 +1,4 @@
+{
+  "summary": "Added Enter key support to the AutoCompleteSearch input so that pressing Enter triggers a search with the current input value, even if no suggestion is selected. This improves the search UX and fixes the main issue where users expected search to work on Enter. The rest of the search logic and API integration remains robust and unchanged.",
+  "current_status": "Search now works on Enter key in the input, in addition to button and suggestion click. The MarketIntelligenceTool search experience is now more intuitive and user-friendly. Ready for further UX testing."
+} 

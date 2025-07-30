@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import { searchCompanies, type Company } from "./lib/search-apis"
 import { SearchExamples } from "./components/search-examples"
-import { FastAutocomplete } from "./components/fast-autocomplete"
+import { AutoCompleteSearch } from "./components/auto-complete-search"
 
 const MarketIntelligenceTool = React.memo(() => {
   const [currentScreen, setCurrentScreen] = useState("search")
@@ -294,7 +294,7 @@ const MarketIntelligenceTool = React.memo(() => {
       {/* Smart Search Input */}
       <div className="space-y-4">
         <div className="flex gap-4">
-          <FastAutocomplete
+          <AutoCompleteSearch
             value={searchQuery}
             onChange={handleSearchChange}
             onSelect={handleSuggestionSelect}
