@@ -61,7 +61,6 @@ const MarketIntelligenceTool = React.memo(() => {
   const handleSearch = useCallback(async (queryOverride?: string) => {
     const query = queryOverride || searchQuery
     console.log("Search triggered with query:", query)
-    console.log("Current searchQuery state:", searchQuery)
     if (!query.trim()) {
       console.log("Empty query, returning")
       return
@@ -93,7 +92,7 @@ const MarketIntelligenceTool = React.memo(() => {
     } finally {
       setIsSearching(false)
     }
-  }, [])
+  }, [searchQuery])
 
   // Handle search input changes
   const handleSearchChange = useCallback((value: string) => {
@@ -108,7 +107,7 @@ const MarketIntelligenceTool = React.memo(() => {
     setShowExamples(false)
     // Auto-search when suggestion is selected
     setTimeout(() => handleSearch(suggestion.text), 50)
-  }, [])
+  }, [handleSearch])
 
   // Handle example selection
   const handleExampleSelect = useCallback((query: string) => {
@@ -116,7 +115,7 @@ const MarketIntelligenceTool = React.memo(() => {
     setShowExamples(false)
     // Auto-search when example is selected
     setTimeout(() => handleSearch(query), 100)
-  }, [])
+  }, [handleSearch])
 
   // Handle relevance feedback
   const handleRelevanceFeedback = useCallback(
@@ -407,7 +406,17 @@ const MarketIntelligenceTool = React.memo(() => {
         </div>
       )}
 
-      
+      {/* Debug Info - Only show when there's a search query */}
+      {searchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+          <div className="text-sm text-blue-800">
+            Ready to search for: <strong>"{searchQuery}"</strong>
+          </div>
+          <div className="text-xs text-blue-600 mt-1">
+            Click Search button or press Enter to search
+          </div>
+        </div>
+      )}
 
       {/* Search Results */}
       {searchResults.length > 0 && (
