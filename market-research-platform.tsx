@@ -302,6 +302,8 @@ const MarketResearchPlatform = () => {
   const EnrichmentScreen = () => {
     const [selectedColumns, setSelectedColumns] = useState(["website", "employees", "funding", "location"])
     const [isEnriching, setIsEnriching] = useState(false)
+    const [showCustomInput, setShowCustomInput] = useState(false)
+    const [customColumn, setCustomColumn] = useState("")
 
     const availableColumns = [
       { id: "website", name: "Website", icon: Globe },
@@ -332,7 +334,7 @@ const MarketResearchPlatform = () => {
         {/* Column Selection */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <h3 className="font-medium text-gray-900 mb-4">Select Data Points</h3>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="flex flex-wrap gap-3">
             {availableColumns.map((column) => {
               const Icon = column.icon
               const isSelected = selectedColumns.includes(column.id)
@@ -346,15 +348,69 @@ const MarketResearchPlatform = () => {
                       setSelectedColumns((prev) => [...prev, column.id])
                     }
                   }}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    isSelected ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                  className={`px-4 py-2 rounded-full border-2 transition-all flex items-center gap-2 ${
+                    isSelected 
+                      ? "border-blue-600 bg-blue-600 text-white" 
+                      : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50"
                   }`}
                 >
-                  <Icon className={`w-5 h-5 mx-auto mb-2 ${isSelected ? "text-blue-600" : "text-gray-400"}`} />
-                  <div className="text-sm font-medium text-gray-900">{column.name}</div>
+                  <Icon className={`w-4 h-4 ${isSelected ? "text-white" : "text-gray-500"}`} />
+                  <span className="text-sm font-medium">{column.name}</span>
                 </button>
               )
             })}
+            {showCustomInput ? (
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  type="text"
+                  className="px-4 py-2 rounded-full text-sm font-medium border-2 border-blue-600 outline-none w-32"
+                  placeholder="Custom column..."
+                  value={customColumn}
+                  onChange={(e) => setCustomColumn(e.target.value)}
+                  onBlur={() => {
+                    if (customColumn.trim()) {
+                      const customId = `custom-${customColumn.trim().toLowerCase().replace(/\s+/g, '-')}`
+                      if (!selectedColumns.includes(customId)) {
+                        setSelectedColumns((prev) => [...prev, customId])
+                      }
+                    }
+                    setShowCustomInput(false)
+                    setCustomColumn("")
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && customColumn.trim()) {
+                      const customId = `custom-${customColumn.trim().toLowerCase().replace(/\s+/g, '-')}`
+                      if (!selectedColumns.includes(customId)) {
+                        setSelectedColumns((prev) => [...prev, customId])
+                      }
+                      setShowCustomInput(false)
+                      setCustomColumn("")
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    setShowCustomInput(false)
+                    setCustomColumn("")
+                  }}
+                  className="px-2 py-2 text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setShowCustomInput(true)
+                  setCustomColumn("")
+                }}
+                className="px-4 py-2 rounded-full border-2 border-dashed border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-all flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="text-sm font-medium">Add Custom</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -370,9 +426,13 @@ const MarketResearchPlatform = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
                   {selectedColumns.map((columnId) => {
                     const column = availableColumns.find((c) => c.id === columnId)
+                    const isCustomColumn = columnId.startsWith('custom-')
+                    const customColumnName = isCustomColumn 
+                      ? columnId.replace('custom-', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                      : null
                     return (
                       <th key={columnId} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        {column?.name}
+                        {column?.name || customColumnName}
                       </th>
                     )
                   })}
@@ -391,11 +451,14 @@ const MarketResearchPlatform = () => {
                         </div>
                       </div>
                     </td>
-                    {selectedColumns.map((columnId) => (
-                      <td key={columnId} className="px-4 py-4 text-sm text-gray-900">
-                        {company[columnId] || "—"}
-                      </td>
-                    ))}
+                    {selectedColumns.map((columnId) => {
+                      const isCustomColumn = columnId.startsWith('custom-')
+                      return (
+                        <td key={columnId} className="px-4 py-4 text-sm text-gray-900">
+                          {isCustomColumn ? "—" : (company[columnId] || "—")}
+                        </td>
+                      )
+                    })}
                     <td className="px-4 py-4">
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -461,6 +524,18 @@ const MarketResearchPlatform = () => {
   // Action Screen Component
   const ActionScreen = () => {
     const [activeTab, setActiveTab] = useState("export")
+    const [selectedColumns, setSelectedColumns] = useState(["website", "employees", "funding", "location"])
+
+    const availableColumns = [
+      { id: "website", name: "Website", icon: Globe },
+      { id: "employees", name: "Employee Count", icon: Users },
+      { id: "funding", name: "Total Funding", icon: DollarSign },
+      { id: "location", name: "HQ Location", icon: MapPin },
+      { id: "industry", name: "Industry", icon: Building },
+      { id: "founded", name: "Founded Year", icon: Calendar },
+      { id: "email", name: "Contact Email", icon: Mail },
+      { id: "phone", name: "Phone Number", icon: Phone },
+    ]
 
     return (
       <div className="space-y-6">
@@ -511,6 +586,19 @@ const MarketResearchPlatform = () => {
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4" />
                   Live Monitoring
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab("data")}
+                className={`px-6 py-4 font-medium text-sm transition-colors ${
+                  activeTab === "data"
+                    ? "border-b-2 border-blue-600 text-blue-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Table className="w-4 h-4" />
+                  Data Table
                 </div>
               </button>
             </div>
@@ -595,6 +683,97 @@ const MarketResearchPlatform = () => {
                       </div>
                     )
                   })}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "data" && (
+              <div className="space-y-6">
+                <h3 className="font-medium text-gray-900">Company Data Table</h3>
+                
+                {/* Column Selection */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-3">Select Columns to Display</h4>
+                  <div className="grid grid-cols-4 gap-3">
+                    {availableColumns.map((column) => {
+                      const Icon = column.icon
+                      const isSelected = selectedColumns.includes(column.id)
+                      return (
+                        <button
+                          key={column.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedColumns((prev) => prev.filter((id) => id !== column.id))
+                            } else {
+                              setSelectedColumns((prev) => [...prev, column.id])
+                            }
+                          }}
+                          className={`p-3 rounded-lg border-2 transition-all text-sm ${
+                            isSelected ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <Icon className={`w-4 h-4 mx-auto mb-1 ${isSelected ? "text-blue-600" : "text-gray-400"}`} />
+                          <div className="font-medium text-gray-900">{column.name}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Data Table */}
+                <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b bg-gray-50">
+                    <h4 className="font-medium text-gray-900">Company Data</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                          {selectedColumns.map((columnId) => {
+                            const column = availableColumns.find((c) => c.id === columnId)
+                            return (
+                              <th key={columnId} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                {column?.name}
+                              </th>
+                            )
+                          })}
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {companies.map((company) => (
+                          <tr key={company.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-3">
+                                <img src={company.logo || "/placeholder.svg"} alt={company.name} className="w-8 h-8 rounded" />
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">{company.name}</div>
+                                  <div className="text-sm text-gray-500">{company.description}</div>
+                                </div>
+                              </div>
+                            </td>
+                            {selectedColumns.map((columnId) => (
+                              <td key={columnId} className="px-4 py-4 text-sm text-gray-900">
+                                {company[columnId] || "—"}
+                              </td>
+                            ))}
+                            <td className="px-4 py-4">
+                              <span
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  company.status === "validated"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-yellow-100 text-yellow-700"
+                                }`}
+                              >
+                                {company.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
