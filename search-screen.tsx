@@ -19,6 +19,7 @@ import {
 import { type Company } from "./lib/search-apis"
 import { SearchExamples } from "./components/search-examples"
 import { AutoCompleteSearch } from "./components/auto-complete-search"
+import EnhancedSearchSuggestions from "./components/enhanced-search-suggestions"
 
 interface SearchScreenProps {
   searchQuery: string;
@@ -232,9 +233,22 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
           </button>
         </div>
 
-        {/* Quick completion pills */}
+        {/* Enhanced AI Suggestions */}
+        {searchQuery && searchQuery.length > 2 && (
+          <div className="relative">
+            <EnhancedSearchSuggestions
+              query={searchQuery}
+              onSuggestionSelect={handleExampleSelect}
+              maxSuggestions={6}
+              showConfidence={true}
+              className="absolute top-2 left-0 right-0 z-50"
+            />
+          </div>
+        )}
+
+        {/* Quick completion pills - fallback */}
         {searchQuery && searchQuery.length > 3 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             {[
               `${searchQuery} in NYC`,
               `${searchQuery} in 2025`,
