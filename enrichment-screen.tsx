@@ -35,6 +35,9 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     { id: "email", name: "Contact Email", enabled: false },
     { id: "phone", name: "Phone Number", enabled: false },
   ]);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customColumnName, setCustomColumnName] = useState("");
+  const [isEnriching, setIsEnriching] = useState(false);
 
   const handleSelectAll = useCallback(() => {
     if (selectedCompanies.size === relevantCompanies.length) {
@@ -58,7 +61,25 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
 
   const handleEnrichSelected = useCallback(() => {
     console.log("Enriching selected companies:", Array.from(selectedCompanies));
+    setIsEnriching(true);
+    setTimeout(() => {
+      setIsEnriching(false);
+    }, 3000);
   }, [selectedCompanies]);
+
+  const handleAddCustomColumn = useCallback(() => {
+    if (customColumnName.trim()) {
+      const id = `custom-${customColumnName.trim().toLowerCase().replace(/\s+/g, '-')}`;
+      setEnrichmentColumns(prev => {
+        if (prev.some(col => col.id === id)) {
+          return prev;
+        }
+        return [...prev, { id, name: customColumnName.trim(), enabled: true }];
+      });
+      setCustomColumnName("");
+      setShowCustomInput(false);
+    }
+  }, [customColumnName]);
 
   const enrichedCompanies = useMemo(() => 
     relevantCompanies.map(company => ({
@@ -80,11 +101,11 @@ return (
         <div className="flex items-center gap-3">
         <button 
             onClick={handleEnrichSelected}
-            disabled={selectedCompanies.size === 0}
+            disabled={selectedCompanies.size === 0 || isEnriching}
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center gap-2"
         >
             <Sparkles className="w-4 h-4" />
-            Enrich Selected ({selectedCompanies.size})
+            {isEnriching ? 'Enriching...' : `Enrich Selected (${selectedCompanies.size})`}
         </button>
         <button onClick={handleExport} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2">
             <Download className="w-4 h-4" />
@@ -114,6 +135,43 @@ return (
             <span className="text-sm text-gray-700">{column.name}</span>
             </label>
         ))}
+        {showCustomInput ? (
+            <div className="col-span-4 flex items-center gap-2">
+            <input
+                type="text"
+                value={customColumnName}
+                onChange={(e) => setCustomColumnName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddCustomColumn();
+                  }
+                }}
+                placeholder="Custom column name"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                autoFocus
+            />
+            <button
+                onClick={handleAddCustomColumn}
+                className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+            >
+                Add
+            </button>
+            <button
+                onClick={() => setShowCustomInput(false)}
+                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
+            >
+                Cancel
+            </button>
+            </div>
+        ) : (
+            <button
+            onClick={() => setShowCustomInput(true)}
+            className="col-span-4 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+            >
+            <Plus className="w-4 h-4" />
+            Add Custom Column
+            </button>
+        )}
         </div>
     </div>
 
@@ -253,6 +311,19 @@ return (
         </div>
     </div>
 
+    {/* Enrichment Progress */}
+    {isEnriching && (
+      <div className="bg-blue-50 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-blue-900">Enriching data...</span>
+          <span className="text-sm text-blue-700">Processing...</span>
+        </div>
+        <div className="w-full bg-blue-200 rounded-full h-2">
+          <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: "60%" }} />
+        </div>
+      </div>
+    )}
+
     {/* Summary Stats */}
     <div className="grid grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow-sm">
@@ -288,7 +359,7 @@ return (
         </button>
         <button
         onClick={() => setCurrentScreen("action")}
-        disabled={selectedCompanies.size === 0}
+        disabled={selectedCompanies.size === 0 || isEnriching}
         className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2"
         >
         Take Action
