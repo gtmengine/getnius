@@ -22,6 +22,7 @@ import {
   Zap,
 } from "lucide-react";
 import { type Company } from "./lib/search-apis";
+import ColumnSelector from "./column-selector";
 
 interface EnrichmentScreenProps {
     relevantCompanies: Company[];
@@ -36,18 +37,22 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     handleExport
 }) => {
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
-  const [enrichmentColumns, setEnrichmentColumns] = useState([
-    { id: "website", name: "Website", enabled: true, icon: Globe },
-    { id: "employees", name: "Employee Count", enabled: true, icon: Users },
-    { id: "funding", name: "Total Funding", enabled: true, icon: DollarSign },
-    { id: "location", name: "HQ Location", enabled: true, icon: MapPin },
-    { id: "industry", name: "Industry", enabled: false, icon: Building },
-    { id: "founded", name: "Founded Year", enabled: false, icon: Calendar },
-    { id: "email", name: "Contact Email", enabled: false, icon: Mail },
-    { id: "phone", name: "Phone Number", enabled: false, icon: Phone },
+  
+  // New state structure for column management
+  const [availableColumns] = useState([
+    "Website", "Employee Count", "Total Funding", "HQ Location", 
+    "Industry", "Founded Year", "Contact Email", "Phone Number"
   ]);
-  const [showCustomInput, setShowCustomInput] = useState(false);
-  const [customColumnName, setCustomColumnName] = useState("");
+
+  const [suggestedColumns] = useState([
+    "Description", "CEO Name", "Business Model", "Technology Stack",
+    "Social Media", "Company Size", "Revenue Range", "Headquarters"
+  ]);
+
+  const [selectedColumns, setSelectedColumns] = useState([
+    "Website", "Employee Count", "Total Funding", "HQ Location"
+  ]);
+
   const [isEnriching, setIsEnriching] = useState(false);
 
   const handleSelectAll = useCallback(() => {
@@ -77,20 +82,6 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
       setIsEnriching(false);
     }, 3000);
   }, [selectedCompanies]);
-
-  const handleAddCustomColumn = useCallback(() => {
-    if (customColumnName.trim()) {
-      const id = `custom-${customColumnName.trim().toLowerCase().replace(/\s+/g, '-')}`;
-      setEnrichmentColumns(prev => {
-        if (prev.some(col => col.id === id)) {
-          return prev;
-        }
-        return [...prev, { id, name: customColumnName.trim(), enabled: true, icon: Database }];
-      });
-      setCustomColumnName("");
-      setShowCustomInput(false);
-    }
-  }, [customColumnName]);
 
   const enrichedCompanies = useMemo(() => 
     relevantCompanies.map(company => ({
@@ -125,72 +116,13 @@ return (
         </div>
     </div>
 
-    {/* Column Selection */}
-    <div className="bg-white rounded-lg p-4 shadow-sm">
-        <h3 className="font-medium text-gray-900 mb-3">Enrichment Columns</h3>
-        <div className="flex flex-wrap gap-3">
-        {enrichmentColumns.map((column) => {
-            const Icon = column.icon;
-            return (
-            <button
-                key={column.id}
-                onClick={() => {
-                setEnrichmentColumns(prev => 
-                    prev.map(col => 
-                    col.id === column.id ? { ...col, enabled: !col.enabled } : col
-                    )
-                )
-                }}
-                className={`px-4 py-2 rounded-full border-2 transition-all flex items-center gap-2 ${
-                    column.enabled 
-                        ? "border-blue-600 bg-blue-600 text-white" 
-                        : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50"
-                }`}
-            >
-                <Icon className={`w-4 h-4 ${column.enabled ? "text-white" : "text-gray-500"}`} />
-                <span className="text-sm font-medium">{column.name}</span>
-            </button>
-            )
-        })}
-        {showCustomInput ? (
-            <div className="flex items-center gap-2">
-            <input
-                type="text"
-                value={customColumnName}
-                onChange={(e) => setCustomColumnName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddCustomColumn();
-                  }
-                }}
-                placeholder="Custom column name"
-                className="px-4 py-2 rounded-full text-sm font-medium border-2 border-blue-600 outline-none w-32"
-                autoFocus
-            />
-            <button
-                onClick={handleAddCustomColumn}
-                className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
-            >
-                Add
-            </button>
-            <button
-                onClick={() => setShowCustomInput(false)}
-                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
-            >
-                Cancel
-            </button>
-            </div>
-        ) : (
-            <button
-            onClick={() => setShowCustomInput(true)}
-            className="px-4 py-2 rounded-full border-2 border-dashed border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-all flex items-center gap-2"
-            >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm font-medium">Add Custom</span>
-            </button>
-        )}
-        </div>
-    </div>
+    {/* Column Selector */}
+    <ColumnSelector
+        availableColumns={availableColumns}
+        suggestedColumns={suggestedColumns}
+        selectedColumns={selectedColumns}
+        onChange={setSelectedColumns}
+    />
 
     {/* Data Table */}
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -208,9 +140,9 @@ return (
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                {enrichmentColumns.filter(col => col.enabled).map(column => (
-                <th key={column.id} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    {column.name}
+                {selectedColumns.map(columnName => (
+                <th key={columnName} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    {columnName}
                 </th>
                 ))}
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -265,9 +197,9 @@ return (
                     {company.source}
                     </span>
                 </td>
-                {enrichmentColumns.filter(col => col.enabled).map(column => (
-                    <td key={column.id} className="px-4 py-4 text-sm text-gray-900">
-                    {column.id === "website" && company.website ? (
+                {selectedColumns.map(columnName => (
+                    <td key={columnName} className="px-4 py-4 text-sm text-gray-900">
+                    {columnName === "Website" && company.website ? (
                         <a
                         href={company.website}
                         target="_blank"
@@ -276,12 +208,20 @@ return (
                         >
                         {new URL(company.website).hostname}
                         </a>
-                    ) : column.id === "employees" ? (
+                    ) : columnName === "Employee Count" ? (
                         company.employees || "—"
-                    ) : column.id === "funding" ? (
+                    ) : columnName === "Total Funding" ? (
                         company.funding || "—"
-                    ) : column.id === "location" ? (
+                    ) : columnName === "HQ Location" ? (
                         company.location || "—"
+                    ) : columnName === "Industry" ? (
+                        company.industry || "—"
+                    ) : columnName === "Founded Year" ? (
+                        company.founded || "—"
+                    ) : columnName === "Contact Email" ? (
+                        company.email || "—"
+                    ) : columnName === "Phone Number" ? (
+                        company.phone || "—"
                     ) : (
                         "—"
                     )}
@@ -359,7 +299,7 @@ return (
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
         <div className="text-2xl font-bold text-gray-600">
-            {enrichmentColumns.filter(col => col.enabled).length}
+            {selectedColumns.length}
         </div>
         <div className="text-sm text-gray-600">Active Columns</div>
         </div>
