@@ -7,11 +7,16 @@ import {
 } from "lucide-react";
 
 interface ActionScreenProps {
-  setCurrentScreen: (screen: string) => void;
+    setCurrentScreen: (screen: string) => void;
+    handleExport: () => void;
 }
 
 // Action Screen Component
-const ActionScreen: React.FC<ActionScreenProps> = ({ setCurrentScreen }) => {
+const ActionScreen: React.FC<ActionScreenProps> = ({
+    setCurrentScreen,
+    handleExport
+}) => {
+    
     return (
     <div className="space-y-6">
     <div className="flex items-center justify-between">
@@ -28,13 +33,19 @@ const ActionScreen: React.FC<ActionScreenProps> = ({ setCurrentScreen }) => {
             { name: "Google Sheets", description: "Real-time sync", icon: Database },
             { name: "HubSpot CRM", description: "Create contacts", icon: Database },
             { name: "Webhook/API", description: "Custom endpoint", icon: Zap },
-            { name: "CSV Download", description: "Instant download", icon: Download },
+            {
+                name: "CSV Download", 
+                description: "Instant download",
+                icon: Download,
+                action: handleExport
+            },
         ].map((option) => {
             const Icon = option.icon
             return (
             <button
                 key={option.name}
                 className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 text-left"
+                onClick={option.action} // Attach the action here
             >
                 <div className="flex items-center gap-3">
                 <div className="p-2 bg-gray-100 rounded-lg">

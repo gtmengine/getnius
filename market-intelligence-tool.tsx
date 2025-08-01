@@ -266,7 +266,7 @@ const MarketIntelligenceTool = React.memo(() => {
         )}
         
         {currentScreen === "action" && (
-          <ActionScreen setCurrentScreen={setCurrentScreen} />
+          <ActionScreen setCurrentScreen={setCurrentScreen} handleExport={handleExport} />
         )}
       </div>
     </div>

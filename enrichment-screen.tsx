@@ -20,9 +20,9 @@ interface EnrichmentScreenProps {
 }
 
 const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
-  relevantCompanies,
-  setCurrentScreen,
-  handleExport
+    relevantCompanies,
+    setCurrentScreen,
+    handleExport
 }) => {
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
   const [enrichmentColumns, setEnrichmentColumns] = useState([
