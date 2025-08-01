@@ -9,6 +9,17 @@ import {
   Sparkles,
   ArrowRight,
   Plus,
+  Globe,
+  Users,
+  DollarSign,
+  MapPin,
+  Calendar,
+  Mail,
+  Phone,
+  Database,
+  Target,
+  FileText,
+  Zap,
 } from "lucide-react";
 import { type Company } from "./lib/search-apis";
 
@@ -26,14 +37,14 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
 }) => {
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
   const [enrichmentColumns, setEnrichmentColumns] = useState([
-    { id: "website", name: "Website", enabled: true },
-    { id: "employees", name: "Employee Count", enabled: true },
-    { id: "funding", name: "Total Funding", enabled: true },
-    { id: "location", name: "HQ Location", enabled: true },
-    { id: "industry", name: "Industry", enabled: false },
-    { id: "founded", name: "Founded Year", enabled: false },
-    { id: "email", name: "Contact Email", enabled: false },
-    { id: "phone", name: "Phone Number", enabled: false },
+    { id: "website", name: "Website", enabled: true, icon: Globe },
+    { id: "employees", name: "Employee Count", enabled: true, icon: Users },
+    { id: "funding", name: "Total Funding", enabled: true, icon: DollarSign },
+    { id: "location", name: "HQ Location", enabled: true, icon: MapPin },
+    { id: "industry", name: "Industry", enabled: false, icon: Building },
+    { id: "founded", name: "Founded Year", enabled: false, icon: Calendar },
+    { id: "email", name: "Contact Email", enabled: false, icon: Mail },
+    { id: "phone", name: "Phone Number", enabled: false, icon: Phone },
   ]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customColumnName, setCustomColumnName] = useState("");
@@ -74,7 +85,7 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
         if (prev.some(col => col.id === id)) {
           return prev;
         }
-        return [...prev, { id, name: customColumnName.trim(), enabled: true }];
+        return [...prev, { id, name: customColumnName.trim(), enabled: true, icon: Database }];
       });
       setCustomColumnName("");
       setShowCustomInput(false);
@@ -117,26 +128,32 @@ return (
     {/* Column Selection */}
     <div className="bg-white rounded-lg p-4 shadow-sm">
         <h3 className="font-medium text-gray-900 mb-3">Enrichment Columns</h3>
-        <div className="grid grid-cols-4 gap-3">
-        {enrichmentColumns.map((column) => (
-            <label key={column.id} className="flex items-center gap-2">
-            <input
-                type="checkbox"
-                checked={column.enabled}
-                onChange={(e) => {
+        <div className="flex flex-wrap gap-3">
+        {enrichmentColumns.map((column) => {
+            const Icon = column.icon;
+            return (
+            <button
+                key={column.id}
+                onClick={() => {
                 setEnrichmentColumns(prev => 
                     prev.map(col => 
-                    col.id === column.id ? { ...col, enabled: e.target.checked } : col
+                    col.id === column.id ? { ...col, enabled: !col.enabled } : col
                     )
                 )
                 }}
-                className="rounded border-gray-300"
-            />
-            <span className="text-sm text-gray-700">{column.name}</span>
-            </label>
-        ))}
+                className={`px-4 py-2 rounded-full border-2 transition-all flex items-center gap-2 ${
+                    column.enabled 
+                        ? "border-blue-600 bg-blue-600 text-white" 
+                        : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50"
+                }`}
+            >
+                <Icon className={`w-4 h-4 ${column.enabled ? "text-white" : "text-gray-500"}`} />
+                <span className="text-sm font-medium">{column.name}</span>
+            </button>
+            )
+        })}
         {showCustomInput ? (
-            <div className="col-span-4 flex items-center gap-2">
+            <div className="flex items-center gap-2">
             <input
                 type="text"
                 value={customColumnName}
@@ -147,7 +164,7 @@ return (
                   }
                 }}
                 placeholder="Custom column name"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="px-4 py-2 rounded-full text-sm font-medium border-2 border-blue-600 outline-none w-32"
                 autoFocus
             />
             <button
@@ -166,10 +183,10 @@ return (
         ) : (
             <button
             onClick={() => setShowCustomInput(true)}
-            className="col-span-4 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+            className="px-4 py-2 rounded-full border-2 border-dashed border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-all flex items-center gap-2"
             >
             <Plus className="w-4 h-4" />
-            Add Custom Column
+            <span className="text-sm font-medium">Add Custom</span>
             </button>
         )}
         </div>
