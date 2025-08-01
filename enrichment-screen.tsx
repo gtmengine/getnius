@@ -38,19 +38,35 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
 }) => {
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
   
-  // New state structure for column management
+  // Updated column structure to match the new ColumnSelector
   const [availableColumns] = useState([
-    "Website", "Employee Count", "Total Funding", "HQ Location", 
-    "Industry", "Founded Year", "Contact Email", "Phone Number"
+    'Company Name', 
+    'Industry', 
+    'Revenue', 
+    'Employee Count', 
+    'Location', 
+    'Founded Year',
+    'Website',
+    'LinkedIn',
+    'Technology Stack',
+    'Funding Stage',
+    'Market Cap',
+    'Growth Rate'
   ]);
 
   const [suggestedColumns] = useState([
-    "Description", "CEO Name", "Business Model", "Technology Stack",
-    "Social Media", "Company Size", "Revenue Range", "Headquarters"
+    'Description',
+    'Phone Number',
+    'CEO Name',
+    'Headquarters',
+    'Company Size',
+    'Business Model',
+    'Social Media',
+    'Year Founded'
   ]);
 
   const [selectedColumns, setSelectedColumns] = useState([
-    "Website", "Employee Count", "Total Funding", "HQ Location"
+    'Company Name', 'Industry', 'Revenue', 'Employee Count'
   ]);
 
   const [isEnriching, setIsEnriching] = useState(false);
@@ -199,29 +215,55 @@ return (
                 </td>
                 {selectedColumns.map(columnName => (
                     <td key={columnName} className="px-4 py-4 text-sm text-gray-900">
-                    {columnName === "Website" && company.website ? (
-                        <a
-                        href={company.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700"
-                        >
-                        {new URL(company.website).hostname}
-                        </a>
-                    ) : columnName === "Employee Count" ? (
-                        company.employees || "—"
-                    ) : columnName === "Total Funding" ? (
-                        company.funding || "—"
-                    ) : columnName === "HQ Location" ? (
-                        company.location || "—"
+                    {columnName === "Company Name" ? (
+                        company.name || "—"
                     ) : columnName === "Industry" ? (
                         company.industry || "—"
+                    ) : columnName === "Revenue" ? (
+                        company.funding || "—"
+                    ) : columnName === "Employee Count" ? (
+                        company.employees || "—"
+                    ) : columnName === "Location" ? (
+                        company.location || "—"
                     ) : columnName === "Founded Year" ? (
                         company.founded || "—"
-                    ) : columnName === "Contact Email" ? (
-                        company.email || "—"
+                    ) : columnName === "Website" ? (
+                        company.website ? (
+                            <a
+                            href={company.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700"
+                            >
+                            {new URL(company.website).hostname}
+                            </a>
+                        ) : "—"
+                    ) : columnName === "LinkedIn" ? (
+                        "—"
+                    ) : columnName === "Technology Stack" ? (
+                        "—"
+                    ) : columnName === "Funding Stage" ? (
+                        company.funding || "—"
+                    ) : columnName === "Market Cap" ? (
+                        "—"
+                    ) : columnName === "Growth Rate" ? (
+                        "—"
+                    ) : columnName === "Description" ? (
+                        company.description || "—"
                     ) : columnName === "Phone Number" ? (
                         company.phone || "—"
+                    ) : columnName === "CEO Name" ? (
+                        "—"
+                    ) : columnName === "Headquarters" ? (
+                        company.location || "—"
+                    ) : columnName === "Company Size" ? (
+                        company.employees || "—"
+                    ) : columnName === "Business Model" ? (
+                        "—"
+                    ) : columnName === "Social Media" ? (
+                        "—"
+                    ) : columnName === "Year Founded" ? (
+                        company.founded || "—"
                     ) : (
                         "—"
                     )}
