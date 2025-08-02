@@ -165,7 +165,7 @@ const MarketIntelligenceTool = React.memo(() => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-8 py-4">
+        <div className="max-w-7xl mx-auto px-8 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-600 rounded-lg">
@@ -176,6 +176,35 @@ const MarketIntelligenceTool = React.memo(() => {
                 <p className="text-sm text-gray-600">Your ultimate Market-Intelligence tool</p>
               </div>
             </div>
+            <div className="flex">
+            {[
+              { id: "search", name: "Search", icon: Search },
+              { id: "enrich", name: "Enrich", icon: Database },
+              { id: "action", name: "Action", icon: Zap },
+            ].map((item, index) => {
+                const Icon = item.icon
+                const isActive = currentScreen === item.id
+                const isCompleted = index === 0 ? relevantCompanies.length > 0 : 
+                                    index === 1 ? relevantCompanies.length > 0 : false
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setCurrentScreen(item.id)}
+                    className={`flex items-center gap-3 px-6 py-2 transition-colors relative rounded-md ${
+                      isActive
+                        ? "bg-blue-600 text-white"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="font-medium">{item.name}</span>
+                    {isCompleted && !isActive && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
             <div className="flex items-center gap-4">
               <button className="p-2 hover:bg-gray-100 rounded-lg">
                 <Bell className="w-5 h-5 text-gray-600" />
@@ -184,42 +213,6 @@ const MarketIntelligenceTool = React.memo(() => {
                 <Settings className="w-5 h-5 text-gray-600" />
               </button>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="flex">
-            {[
-              { id: "search", name: "Search", icon: Search },
-              { id: "enrich", name: "Enrich", icon: Database },
-              { id: "action", name: "Action", icon: Zap },
-            ].map((item, index) => {
-              const Icon = item.icon
-              const isActive = currentScreen === item.id
-              const isCompleted = index === 0 ? relevantCompanies.length > 0 : 
-                                index === 1 ? relevantCompanies.length > 0 : false
-              
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setCurrentScreen(item.id)}
-                  className={`flex items-center gap-3 px-6 py-4 border-b-2 transition-colors relative ${
-                    isActive
-                      ? "border-blue-600 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span className="font-medium">{item.name}</span>
-                  {isCompleted && !isActive && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
-                  )}
-                </button>
-              )
-            })}
           </div>
         </div>
       </div>
