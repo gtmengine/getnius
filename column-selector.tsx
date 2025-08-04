@@ -9,6 +9,10 @@ interface ColumnSelectorProps {
   selectedColumns?: string[];
   onChange?: (selected: string[]) => void;
   columnReasons?: Record<string, string>;
+  // External deps
+  selectedCompanies: Set<string>;
+  relevantCompanies: any[]; // Or use your Company type
+  handleSelectAll: () => void;
 }
 
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({ 
@@ -36,11 +40,16 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
   ],
   selectedColumns = ['Company Name', 'Industry'], 
   onChange = (selected) => console.log('Selected:', selected),
-  columnReasons = {}
+  columnReasons = {},
+
+  // External deps
+  selectedCompanies,
+  relevantCompanies,
+  handleSelectAll
 }) => {
   const [internalSelected, setInternalSelected] = useState(selectedColumns);
   
-  const handleToggleColumn = (column: string, isApproving = false) => {
+  const handleToggleColumn = (column: string) => {
     const newSelected = internalSelected.includes(column)
       ? internalSelected.filter(col => col !== column)
       : [...internalSelected, column];
@@ -76,7 +85,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
     }
   };
 
-  // Create display order: selected first, then unselected available, then suggestions, then custom
+  // Create display order: selected first, then unselected available, then custom, then suggestions
   const selectedAvailable = availableColumns.filter(col => internalSelected.includes(col));
   const unselectedAvailable = availableColumns.filter(col => !internalSelected.includes(col));
   const unselectedSuggestions = suggestedColumns.filter(col => !internalSelected.includes(col));
@@ -92,38 +101,55 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
   ];
 
   return (
-    <div className="w-full">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
-        Enrichment Columns
-      </h2>
-      
-      {/* Column Headers Bar */}
-      <div className="overflow-x-auto bg-gray-50 border border-gray-200 rounded-lg">
-        <div className="flex min-w-max">
-          {/* Row number column (fixed) */}
-          <div className="flex-shrink-0 w-12 h-10 border-r border-gray-200 bg-gray-100 flex items-center justify-center">
-            <span className="text-xs text-gray-500">#</span>
-          </div>
+    <thead className="bg-gray-50">
+      <tr>
+        {/* Row selector header */}
+        <th className="sticky left-0 z-30 w-12 h-10 border border-gray-200 bg-gray-100 text-center">
+          <input
+            type="checkbox"
+            checked={selectedCompanies.size === relevantCompanies.length && relevantCompanies.length > 0}
+            onChange={handleSelectAll}
+            className="rounded border-gray-300"
+          />
+        </th>
+        
+        {/* Company and Source headers - make them sticky too */}
+        <th 
+          className="sticky left-12 z-30 h-10 border-t border-b border-r border-gray-200 bg-gray-100 text-center"
+        >
+          <span className="text-xs text-gray-500">Company</span>
+        </th>
+        <th 
+          className="left-60 z-30 w-32 h-10 border-t border-b border-r border-gray-200 bg-gray-100 text-center"
+        >
+          <span className="text-xs text-gray-500">Source</span>
+        </th>
+
+        {/* Column headers */}
+        {allDisplayColumns.map((column, index) => {
+          const isSelected = internalSelected.includes(column);
+          const isSuggestion = suggestedColumns.includes(column) && !isSelected;
+          const isAvailable = availableColumns.includes(column);
           
-          {/* Column Headers */}
-          {allDisplayColumns.map((column, index) => {
-            const isSelected = internalSelected.includes(column);
-            const isSuggestion = suggestedColumns.includes(column) && !isSelected;
-            const isAvailable = availableColumns.includes(column);
-            
-            return (
-              <div
-                key={column}
-                className={`
-                  relative flex-shrink-0 min-w-32 max-w-48 h-10 border-r border-gray-200 flex items-center justify-center cursor-pointer
-                  ${isSelected 
-                    ? 'bg-blue-100 text-blue-800 border-blue-200' 
-                    : isSuggestion 
-                      ? 'bg-gray-100 text-gray-500 hover:bg-gray-150 border-dashed'
-                      : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }
-                  transition-colors duration-150
-                `}
+          return (
+            <th
+              key={column}
+              className={`
+                relative min-w-32 max-w-48 h-10 border-t border-b border-r border-gray-200
+                ${isSelected 
+                  ? 'bg-blue-100 text-blue-800' 
+                  : isSuggestion 
+                    ? 'bg-gray-100 text-gray-500 hover:bg-gray-150'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }
+                transition-colors duration-150
+              `}
+              style={{ 
+                borderLeft: index === 0 ? '1px solid #e5e7eb' : 'none'
+              }}
+            >
+              <div 
+                className="h-full w-full flex items-center justify-center cursor-pointer"
                 tabIndex={0}
                 role="button"
                 aria-pressed={isSelected}
@@ -141,7 +167,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gray-400 opacity-50"></div>
                 )}
                 
-                <div className="flex items-center px-2">
+                <div className="flex items-center px-2 w-full justify-center">
                   {/* Plus icon for suggestions */}
                   {isSuggestion && (
                     <Plus size={12} className="mr-1 text-gray-400" />
@@ -165,12 +191,17 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                   {String.fromCharCode(65 + (allDisplayColumns.indexOf(column) % 26))}
                 </div>
               </div>
-            );
-          })}
-          
-          {/* Add Custom Column */}
+            </th>
+          );
+        })}
+        
+        {/* Add Custom Column */}
+        <th 
+          className="min-w-32 h-10 border-t border-b border-r border-gray-200 bg-white hover:bg-gray-50"
+          style={{ borderLeft: 'none' }}
+        >
           <div
-            className="flex-shrink-0 w-32 h-10 border-r border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center cursor-pointer transition-colors duration-150"
+            className="h-full w-full flex items-center justify-center cursor-pointer"
             tabIndex={0}
             role="button"
             aria-label="Add custom column"
@@ -180,30 +211,9 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
             <Plus size={16} className="text-gray-400 mr-1" />
             <span className="text-sm text-gray-500">Add Custom</span>
           </div>
-        </div>
-      </div>
-
-      {/* Selection Summary */}
-      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-        <div>
-          {internalSelected.length} of {allDisplayColumns.length} columns selected • {unselectedSuggestions.length} context-aware suggestions available
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-100 border border-blue-200 rounded-sm"></div>
-            <span>Selected</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-white border border-gray-200 rounded-sm"></div>
-            <span>Available</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-gray-100 border border-gray-300 border-dashed rounded-sm"></div>
-            <span>Suggested</span>
-          </div>
-        </div>
-      </div>
-    </div>
+        </th>
+      </tr>
+    </thead>
   );
 };
 
