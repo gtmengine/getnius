@@ -14,6 +14,7 @@ import {
   Bell,
   Zap,
   Search,
+  MessageCircle,
 } from "lucide-react"
 
 const MarketIntelligenceTool = React.memo(() => {
@@ -208,6 +209,16 @@ const MarketIntelligenceTool = React.memo(() => {
               })}
             </div>
             <div className="flex items-center gap-4">
+              {/* Telegram Group Link */}
+              <a
+                href="https://t.me/+4FRzSKQG-RtkODAy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Join the group</span>
+              </a>
               <button className="p-2 hover:bg-gray-100 rounded-lg">
                 <Bell className="w-5 h-5 text-gray-600" />
               </button>
