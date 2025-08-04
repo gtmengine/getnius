@@ -62,7 +62,7 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
   ]);
 
   const [selectedColumns, setSelectedColumns] = useState([
-    'Company Name', 'Industry', 'Revenue', 'Employee Count'
+    'Company Name', 'Industry', 'Funding', 'Employee Count'
   ]);
 
   const [isEnriching, setIsEnriching] = useState(false);
@@ -215,7 +215,7 @@ return (
                         company.name || "—"
                     ) : columnName === "Industry" ? (
                         company.industry || "—"
-                    ) : columnName === "Revenue" ? (
+                    ) : columnName === "Funding" ? (
                         company.funding || "—"
                     ) : columnName === "Employee Count" ? (
                         company.employees || "—"
@@ -238,8 +238,6 @@ return (
                         "—"
                     ) : columnName === "Technology Stack" ? (
                         "—"
-                    ) : columnName === "Funding Stage" ? (
-                        company.funding || "—"
                     ) : columnName === "Market Cap" ? (
                         "—"
                     ) : columnName === "Growth Rate" ? (
