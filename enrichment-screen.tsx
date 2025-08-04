@@ -23,18 +23,25 @@ import {
 } from "lucide-react";
 import { type Company } from "./lib/search-apis";
 import ColumnSelector from "./column-selector";
+import { getSuggestedColumns, getColumnReason, type UseCaseContext } from "./lib/column-suggestions";
 
 interface EnrichmentScreenProps {
     relevantCompanies: Company[];
     searchResults: Company[];
     setCurrentScreen: (screen: string) => void;
     handleExport: () => void;
+    searchQuery?: string;
+    selectedCategory?: string;
+    customCategory?: string;
 }
 
 const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     relevantCompanies,
     setCurrentScreen,
-    handleExport
+    handleExport,
+    searchQuery,
+    selectedCategory,
+    customCategory
 }) => {
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
   
@@ -53,13 +60,23 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     'Growth Rate'
   ]);
 
-  const [suggestedColumns] = useState([
-    'Description',
-    'Phone Number',
-    'CEO Name',
-    'Business Model',
-    'Social Media'
-  ]);
+  // Generate dynamic suggested columns based on use case context
+  const useCaseContext: UseCaseContext = {
+    searchQuery,
+    selectedCategory,
+    customCategory
+  };
+  
+  const [suggestedColumns] = useState(() => getSuggestedColumns(useCaseContext));
+  
+  // Generate column reasons for tooltips
+  const columnReasons = useMemo(() => {
+    const reasons: Record<string, string> = {};
+    suggestedColumns.forEach(column => {
+      reasons[column] = getColumnReason(column, useCaseContext);
+    });
+    return reasons;
+  }, [suggestedColumns, useCaseContext]);
 
   const [selectedColumns, setSelectedColumns] = useState([
     'Company Name', 'Industry', 'Funding', 'Employee Count'
@@ -134,6 +151,7 @@ return (
         suggestedColumns={suggestedColumns}
         selectedColumns={selectedColumns}
         onChange={setSelectedColumns}
+        columnReasons={columnReasons}
     />
 
     {/* Data Table */}

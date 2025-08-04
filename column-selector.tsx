@@ -1,13 +1,14 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Info } from 'lucide-react';
 
 interface ColumnSelectorProps {
   availableColumns?: string[];
   suggestedColumns?: string[];
   selectedColumns?: string[];
   onChange?: (selected: string[]) => void;
+  columnReasons?: Record<string, string>;
 }
 
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({ 
@@ -34,7 +35,8 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
     'Business Model'
   ],
   selectedColumns = ['Company Name', 'Industry'], 
-  onChange = (selected) => console.log('Selected:', selected) 
+  onChange = (selected) => console.log('Selected:', selected),
+  columnReasons = {}
 }) => {
   const [internalSelected, setInternalSelected] = useState(selectedColumns);
   
@@ -145,9 +147,17 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                     <Plus size={12} className="mr-1 text-gray-400" />
                   )}
                   
-                  <span className={`text-sm font-medium truncate ${isSuggestion ? 'italic' : ''}`}>
+                  <span 
+                    className={`text-sm font-medium truncate ${isSuggestion ? 'italic' : ''}`}
+                    title={isSuggestion && columnReasons[column] ? columnReasons[column] : undefined}
+                  >
                     {column}
                   </span>
+                  
+                  {/* Info icon for suggested columns with reasons */}
+                  {isSuggestion && columnReasons[column] && (
+                    <Info size={10} className="ml-1 text-gray-400" />
+                  )}
                 </div>
                 
                 {/* Column letter (like Google Sheets) */}
@@ -297,7 +307,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
       {/* Selection Summary */}
       <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
         <div>
-          {internalSelected.length} of {allDisplayColumns.length} columns selected • {unselectedSuggestions.length} suggestions available
+          {internalSelected.length} of {allDisplayColumns.length} columns selected • {unselectedSuggestions.length} context-aware suggestions available
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">

@@ -260,6 +260,9 @@ const MarketIntelligenceTool = React.memo(() => {
             searchResults={searchResults}
             setCurrentScreen={setCurrentScreen}
             handleExport={handleExport}
+            searchQuery={searchQuery}
+            selectedCategory={selectedCategory}
+            customCategory={customCategory}
           />
         )}
         
