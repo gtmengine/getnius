@@ -33,6 +33,7 @@ interface EnrichmentScreenProps {
     searchQuery?: string;
     selectedCategory?: string;
     customCategory?: string;
+    handleEnrichedData: (companies: Company[]) => void;
 }
 
 const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
@@ -41,7 +42,8 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     handleExport,
     searchQuery,
     selectedCategory,
-    customCategory
+    customCategory,
+    handleEnrichedData
 }) => {
     const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
 
@@ -145,13 +147,20 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
         });
     }, []);
 
-    const handleEnrichSelected = useCallback(() => {
-        console.log("Enriching selected companies:", Array.from(selectedCompanies));
-        setIsEnriching(true);
-        setTimeout(() => {
-            setIsEnriching(false);
-        }, 3000);
-    }, [selectedCompanies]);
+const handleEnrichSelected = useCallback(() => {
+  console.log("Enriching selected companies:", Array.from(selectedCompanies));
+  setIsEnriching(true);
+  
+  // Simulate API call
+  setTimeout(() => {
+    setIsEnriching(false);
+    // Pass enriched data to parent
+    handleEnrichedData(
+      relevantCompanies.filter(company => 
+        selectedCompanies.has(company.id)
+    ));
+  }, 3000);
+}, [selectedCompanies, relevantCompanies, handleEnrichedData]);
 
     const enrichedCompanies = useMemo(() =>
         relevantCompanies.map(company => ({
