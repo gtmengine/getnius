@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Info } from 'lucide-react';
 
 interface ColumnSelectorProps {
@@ -93,18 +93,33 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
     !availableColumns.includes(col) && !suggestedColumns.includes(col)
   );
   
-  const allDisplayColumns = [
-    ...selectedAvailable,
-    ...unselectedAvailable, 
-    ...customColumns,
-    ...unselectedSuggestions
-  ];
+const allDisplayColumns = useMemo(() => {
+  // Combine all possible columns
+  const allPossible = [...availableColumns, ...suggestedColumns];
+  
+  // Remove duplicates while preserving order
+  const uniqueColumns = allPossible.filter(
+    (item, index) => allPossible.indexOf(item) === index
+  );
+  
+  // Create display order
+  return uniqueColumns.sort((a, b) => {
+    const aSelected = internalSelected.includes(a);
+    const bSelected = internalSelected.includes(b);
+    
+    if (aSelected && !bSelected) return -1;
+    if (!aSelected && bSelected) return 1;
+    
+    // Keep original order for same selection status
+    return allPossible.indexOf(a) - allPossible.indexOf(b);
+  });
+}, [availableColumns, suggestedColumns, internalSelected]);
 
   return (
     <thead className="bg-gray-50">
       <tr>
         {/* Row selector header */}
-        <th className="sticky left-0 z-30 w-12 h-10 border border-gray-200 bg-gray-100 text-center">
+        <th className="sticky left-0 z-30 w-12 h-10 border-t border-b border-l border-r border-gray-200 bg-gray-100 text-center">
           <input
             type="checkbox"
             checked={selectedCompanies.size === relevantCompanies.length && relevantCompanies.length > 0}
@@ -113,14 +128,15 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
           />
         </th>
         
-        {/* Company and Source headers - make them sticky too */}
+        {/* Company header */}
         <th 
           className="sticky left-12 z-30 h-10 border-t border-b border-r border-gray-200 bg-gray-100 text-center"
         >
           <span className="text-xs text-gray-500">Company</span>
         </th>
+        {/* Source header */}
         <th 
-          className="left-60 z-30 w-32 h-10 border-t border-b border-r border-gray-200 bg-gray-100 text-center"
+          className="w-32 h-10 border-t border-b border-r border-gray-200 bg-gray-100 text-center"
         >
           <span className="text-xs text-gray-500">Source</span>
         </th>
@@ -144,9 +160,6 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                 }
                 transition-colors duration-150
               `}
-              style={{ 
-                borderLeft: index === 0 ? '1px solid #e5e7eb' : 'none'
-              }}
             >
               <div 
                 className="h-full w-full flex items-center justify-center cursor-pointer"

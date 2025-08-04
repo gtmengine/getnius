@@ -236,7 +236,7 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="left-60 z-20 bg-white border-b border-r border-gray-200 px-4 py-4">
+                                    <td className="bg-white border-b border-r border-gray-200 px-4 py-4">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${company.source === "firecrawl"
                                                 ? "bg-purple-100 text-purple-700"
