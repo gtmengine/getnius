@@ -21,6 +21,7 @@ import { SearchExamples } from "./components/search-examples"
 import { AutoCompleteSearch } from "./components/auto-complete-search"
 import EnhancedSearchSuggestions from "./components/enhanced-search-suggestions"
 import CSVParser from "./components/csv-parser"
+import LinkProcessor from "./components/link-processor"
 
 interface SearchScreenProps {
   searchQuery: string;
@@ -86,6 +87,10 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
   const [showCSVParser, setShowCSVParser] = React.useState(false);
   const [csvSearchQueries, setCsvSearchQueries] = React.useState<string[]>([]);
 
+  // State for link processor functionality
+  const [showLinkProcessor, setShowLinkProcessor] = React.useState(false);
+  const [processedLinks, setProcessedLinks] = React.useState<any[]>([]);
+
   // Optimize the search examples with useMemo:
   const memoizedSearchExamples = React.useMemo(
     () => <SearchExamples onExampleSelect={handleExampleSelect} />,
@@ -125,6 +130,12 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
   // Handle CSV data processed
   const handleCSVDataProcessed = (data: any) => {
     console.log("CSV data processed:", data);
+  };
+
+  // Handle links processed
+  const handleLinksProcessed = (links: any[]) => {
+    setProcessedLinks(links);
+    setShowLinkProcessor(false);
   };
 
   return (
@@ -420,33 +431,72 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
       {/* Alternative Input Methods */}
       {showExamples && (
         <div className="space-y-6">
-          {/* CSV Parser Section */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-blue-600" />
+          {/* Two-column layout for input methods */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Link Processor Section */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <ExternalLink className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Add Links for Research</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Process URLs to extract company information and data
+                  </p>
+                </div>
+
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setShowLinkProcessor(!showLinkProcessor)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {showLinkProcessor ? "Hide Link Processor" : "Open Link Processor"}
+                  </button>
                 </div>
               </div>
-              
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">Start from CSV</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Upload a CSV file to extract search queries or preview data
-                </p>
-              </div>
+            </div>
 
-              <div className="flex justify-center">
-                <button
-                  onClick={() => setShowCSVParser(!showCSVParser)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  {showCSVParser ? "Hide CSV Parser" : "Open CSV Parser"}
-                </button>
+            {/* CSV Parser Section */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Start from CSV</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Upload a CSV file to extract search queries or preview data
+                  </p>
+                </div>
+
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setShowCSVParser(!showCSVParser)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    {showCSVParser ? "Hide CSV Parser" : "Open CSV Parser"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Link Processor Component */}
+          {showLinkProcessor && (
+            <LinkProcessor
+              onLinksProcessed={handleLinksProcessed}
+              className="mt-4"
+            />
+          )}
 
           {/* CSV Parser Component */}
           {showCSVParser && (
@@ -509,6 +559,56 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                 >
                   Search First Query
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Processed Links Display */}
+          {processedLinks.length > 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="w-5 h-5 text-green-600" />
+                  <span className="font-medium text-green-900">
+                    Processed Links ({processedLinks.length})
+                  </span>
+                </div>
+                <button
+                  onClick={() => setProcessedLinks([])}
+                  className="text-green-600 hover:text-green-700 text-sm"
+                >
+                  Clear All
+                </button>
+              </div>
+              
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {processedLinks.map((link, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">{link.companyName}</span>
+                        <span className="text-xs text-gray-500">({link.segment})</span>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">
+                        {link.location} • {link.tags.slice(0, 3).join(", ")}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleExampleSelect(`${link.companyName} ${link.segment}`)}
+                        className="text-xs text-green-600 hover:text-green-700"
+                      >
+                        Search Similar
+                      </button>
+                      <button
+                        onClick={() => setProcessedLinks(processedLinks.filter((_, i) => i !== index))}
+                        className="text-xs text-red-600 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
