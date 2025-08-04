@@ -53,7 +53,6 @@ interface SearchScreenProps {
 
 const SearchScreen: React.FC<SearchScreenProps> = ({
   searchQuery,
-  setSearchQuery,
   isSearching,
   searchResults,
   companies,
@@ -449,63 +448,21 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                   </p>
                 </div>
 
-                <div className="flex justify-center">
-                  <button
-                    onClick={() => setShowLinkProcessor(!showLinkProcessor)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    {showLinkProcessor ? "Hide Link Processor" : "Open Link Processor"}
-                  </button>
-                </div>
+                {/* Link Processor Component */}
+                <LinkProcessor
+                  onLinksProcessed={handleLinksProcessed}
+                  className="mt-4"
+                />
               </div>
             </div>
 
             {/* CSV Parser Section */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Start from CSV</h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Upload a CSV file to extract search queries or preview data
-                  </p>
-                </div>
-
-                <div className="flex justify-center">
-                  <button
-                    onClick={() => setShowCSVParser(!showCSVParser)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                  >
-                    <FileText className="w-4 h-4" />
-                    {showCSVParser ? "Hide CSV Parser" : "Open CSV Parser"}
-                  </button>
-                </div>
-              </div>
-            </div>
+              <CSVParser
+                onDataProcessed={handleCSVDataProcessed}
+                onSearchFromCSV={handleSearchFromCSV}
+                className="mt-4"
+              />
           </div>
-
-          {/* Link Processor Component */}
-          {showLinkProcessor && (
-            <LinkProcessor
-              onLinksProcessed={handleLinksProcessed}
-              className="mt-4"
-            />
-          )}
-
-          {/* CSV Parser Component */}
-          {showCSVParser && (
-            <CSVParser
-              onDataProcessed={handleCSVDataProcessed}
-              onSearchFromCSV={handleSearchFromCSV}
-              className="mt-4"
-            />
-          )}
 
           {/* CSV Search Queries Display */}
           {csvSearchQueries.length > 0 && (

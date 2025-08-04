@@ -145,7 +145,7 @@ const CSVParser: React.FC<CSVParserProps> = ({
   }, []);
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div>
       {/* File Upload Section */}
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
         <div className="text-center space-y-4">
