@@ -42,14 +42,13 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
   const [availableColumns] = useState([
     'Company Name', 
     'Industry', 
-    'Revenue', 
+    'Funding', 
     'Employee Count', 
     'Location', 
     'Founded Year',
     'Website',
     'LinkedIn',
     'Technology Stack',
-    'Funding Stage',
     'Market Cap',
     'Growth Rate'
   ]);
@@ -58,11 +57,8 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     'Description',
     'Phone Number',
     'CEO Name',
-    'Headquarters',
-    'Company Size',
     'Business Model',
-    'Social Media',
-    'Year Founded'
+    'Social Media'
   ]);
 
   const [selectedColumns, setSelectedColumns] = useState([
@@ -254,16 +250,10 @@ return (
                         company.phone || "—"
                     ) : columnName === "CEO Name" ? (
                         "—"
-                    ) : columnName === "Headquarters" ? (
-                        company.location || "—"
-                    ) : columnName === "Company Size" ? (
-                        company.employees || "—"
                     ) : columnName === "Business Model" ? (
                         "—"
                     ) : columnName === "Social Media" ? (
                         "—"
-                    ) : columnName === "Year Founded" ? (
-                        company.founded || "—"
                     ) : (
                         "—"
                     )}
