@@ -20,6 +20,7 @@ import { type Company } from "./lib/search-apis"
 import { SearchExamples } from "./components/search-examples"
 import { AutoCompleteSearch } from "./components/auto-complete-search"
 import EnhancedSearchSuggestions from "./components/enhanced-search-suggestions"
+import CSVParser from "./components/csv-parser"
 
 interface SearchScreenProps {
   searchQuery: string;
@@ -76,11 +77,55 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
   setShowCustomInput,
   setShowNonRelevantList
 }) => {
+  // State for link input functionality
+  const [links, setLinks] = React.useState<string[]>([]);
+  const [newLink, setNewLink] = React.useState("");
+  const [showLinkInput, setShowLinkInput] = React.useState(false);
+
+  // State for CSV parser functionality
+  const [showCSVParser, setShowCSVParser] = React.useState(false);
+  const [csvSearchQueries, setCsvSearchQueries] = React.useState<string[]>([]);
+
   // Optimize the search examples with useMemo:
   const memoizedSearchExamples = React.useMemo(
     () => <SearchExamples onExampleSelect={handleExampleSelect} />,
     [handleExampleSelect],
   )
+
+  // Handle adding a new link
+  const handleAddLink = () => {
+    if (newLink.trim() && !links.includes(newLink.trim())) {
+      setLinks([...links, newLink.trim()]);
+      setNewLink("");
+      setShowLinkInput(false);
+    }
+  };
+
+  // Handle removing a link
+  const handleRemoveLink = (linkToRemove: string) => {
+    setLinks(links.filter(link => link !== linkToRemove));
+  };
+
+  // Handle link input key press
+  const handleLinkKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleAddLink();
+    } else if (e.key === "Escape") {
+      setShowLinkInput(false);
+      setNewLink("");
+    }
+  };
+
+  // Handle CSV search queries
+  const handleSearchFromCSV = (searchQueries: string[]) => {
+    setCsvSearchQueries(searchQueries);
+    setShowCSVParser(false);
+  };
+
+  // Handle CSV data processed
+  const handleCSVDataProcessed = (data: any) => {
+    console.log("CSV data processed:", data);
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -233,6 +278,86 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
           </button>
         </div>
 
+        {/* Link Input Section */}
+        <div className="space-y-3">
+          {/* Add Link Button */}
+          {!showLinkInput && (
+            <button
+              onClick={() => setShowLinkInput(true)}
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+              tabIndex={10}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Add Reference Link
+            </button>
+          )}
+
+          {/* Link Input Field */}
+          {showLinkInput && (
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={newLink}
+                onChange={(e) => setNewLink(e.target.value)}
+                onKeyDown={handleLinkKeyPress}
+                placeholder="Enter URL (e.g., https://example.com)"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+                tabIndex={11}
+              />
+              <button
+                onClick={handleAddLink}
+                disabled={!newLink.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-300"
+                tabIndex={12}
+              >
+                Add
+              </button>
+              <button
+                onClick={() => {
+                  setShowLinkInput(false);
+                  setNewLink("");
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                tabIndex={13}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* Display Added Links */}
+          {links.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ExternalLink className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Reference Links ({links.length})</span>
+              </div>
+              <div className="space-y-2">
+                {links.map((link, index) => (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-md">
+                    <a
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 text-sm text-blue-600 hover:text-blue-700 truncate"
+                    >
+                      {link}
+                    </a>
+                    <button
+                      onClick={() => handleRemoveLink(link)}
+                      className="p-1 text-gray-400 hover:text-red-500"
+                      title="Remove link"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Enhanced AI Suggestions */}
         {searchQuery && searchQuery.length > 2 && (
           <div className="relative">
@@ -294,21 +419,99 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
 
       {/* Alternative Input Methods */}
       {showExamples && (
-        <div className="grid grid-cols-2 gap-6">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            <input
-              type="text"
-              placeholder="Add the links you want to research"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
+        <div className="space-y-6">
+          {/* CSV Parser Section */}
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Start from CSV</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Upload a CSV file to extract search queries or preview data
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setShowCSVParser(!showCSVParser)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  {showCSVParser ? "Hide CSV Parser" : "Open CSV Parser"}
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center space-y-2">
-            <FileText className="w-8 h-8 text-gray-400 mx-auto" />
-            <div className="font-medium text-gray-900">Start from CSV</div>
-            <div className="text-sm text-gray-500">Upload documents</div>
-            <div className="text-xs text-gray-400">PDF, XLS, ...</div>
-          </div>
+          {/* CSV Parser Component */}
+          {showCSVParser && (
+            <CSVParser
+              onDataProcessed={handleCSVDataProcessed}
+              onSearchFromCSV={handleSearchFromCSV}
+              className="mt-4"
+            />
+          )}
+
+          {/* CSV Search Queries Display */}
+          {csvSearchQueries.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <span className="font-medium text-blue-900">
+                    CSV Search Queries ({csvSearchQueries.length})
+                  </span>
+                </div>
+                <button
+                  onClick={() => setCsvSearchQueries([])}
+                  className="text-blue-600 hover:text-blue-700 text-sm"
+                >
+                  Clear All
+                </button>
+              </div>
+              
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {csvSearchQueries.map((query, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                    <span className="text-sm text-gray-700">{query}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleExampleSelect(query)}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        Use as Search
+                      </button>
+                      <button
+                        onClick={() => setCsvSearchQueries(csvSearchQueries.filter((_, i) => i !== index))}
+                        className="text-xs text-red-600 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-3 pt-3 border-t border-blue-200">
+                <button
+                  onClick={() => {
+                    if (csvSearchQueries.length > 0) {
+                      handleExampleSelect(csvSearchQueries[0]);
+                    }
+                  }}
+                  disabled={csvSearchQueries.length === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 text-sm"
+                >
+                  Search First Query
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -6,6 +6,7 @@ import { searchCompanies, type Company } from "./lib/search-apis"
 import SearchScreen from "./search-screen"
 import EnrichmentScreen from "./enrichment-screen"
 import ActionScreen from "./action-screen"
+import SettingsScreen from "./settings-screen"
 import {
   Target,
   Database,
@@ -181,6 +182,7 @@ const MarketIntelligenceTool = React.memo(() => {
               { id: "search", name: "Search", icon: Search },
               { id: "enrich", name: "Enrich", icon: Database },
               { id: "action", name: "Action", icon: Zap },
+              { id: "settings", name: "Settings", icon: Settings },
             ].map((item, index) => {
                 const Icon = item.icon
                 const isActive = currentScreen === item.id
@@ -209,7 +211,10 @@ const MarketIntelligenceTool = React.memo(() => {
               <button className="p-2 hover:bg-gray-100 rounded-lg">
                 <Bell className="w-5 h-5 text-gray-600" />
               </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
+              <button 
+                onClick={() => setCurrentScreen("settings")}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
                 <Settings className="w-5 h-5 text-gray-600" />
               </button>
             </div>
@@ -260,6 +265,10 @@ const MarketIntelligenceTool = React.memo(() => {
         
         {currentScreen === "action" && (
           <ActionScreen setCurrentScreen={setCurrentScreen} handleExport={handleExport} />
+        )}
+        
+        {currentScreen === "settings" && (
+          <SettingsScreen setCurrentScreen={setCurrentScreen} />
         )}
       </div>
     </div>
