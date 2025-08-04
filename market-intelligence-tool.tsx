@@ -221,7 +221,11 @@ const MarketIntelligenceTool = React.memo(() => {
                 </svg>
                 <span>Join the group</span>
               </a>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
+              <button 
+                className="p-2 hover:bg-gray-100 rounded-lg"
+                title="Subscribe to the newsletter"
+                onClick={() => window.open('https://gtmbe.substack.com/', '_blank')}
+              >
                 <Bell className="w-5 h-5 text-gray-600" />
               </button>
               <button 
