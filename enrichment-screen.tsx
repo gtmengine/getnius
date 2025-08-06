@@ -338,7 +338,7 @@ const handleEnrichSelected = useCallback(() => {
                         <tbody className="divide-y divide-gray-200">
                             {enrichedCompanies.map((company) => (
                                 <tr key={company.id} className="hover:bg-gray-50">
-                                    <td className="sticky left-0 z-20 bg-white border-b border-gray-200 w-16 px-4 py-4">
+                                    <td className="sticky left-0 z-20 bg-white border-b border-r border-gray-200 w-16 px-4 py-4 shadow-sm">
                                         <input
                                             type="checkbox"
                                             checked={selectedCompanies.has(company.id)}
@@ -346,7 +346,7 @@ const handleEnrichSelected = useCallback(() => {
                                             className="rounded border-gray-300"
                                         />
                                     </td>
-                                    <td className="sticky left-16 z-20 bg-white border-b border-r border-gray-200 min-w-64 px-4 py-4">
+                                    <td className="sticky left-16 z-20 bg-white border-b border-r border-gray-200 min-w-64 px-4 py-4 shadow-sm">
                                         <div className="flex items-center gap-3">
                                             {company.logo ? (
                                                 <img

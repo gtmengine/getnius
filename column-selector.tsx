@@ -119,7 +119,7 @@ const allDisplayColumns = useMemo(() => {
     <thead className="bg-gray-50">
       <tr>
         {/* Row selector header */}
-        <th className="sticky left-0 z-30 w-16 h-10 border-t border-b border-l border-r border-gray-200 bg-gray-100 text-center">
+        <th className="sticky left-0 z-30 w-16 h-10 border-t border-b border-l border-r border-gray-200 bg-gray-100 text-center shadow-sm">
           <input
             type="checkbox"
             checked={selectedCompanies.size === relevantCompanies.length && relevantCompanies.length > 0}
@@ -130,7 +130,7 @@ const allDisplayColumns = useMemo(() => {
         
         {/* Company header */}
         <th 
-          className="sticky left-16 z-30 min-w-64 h-10 border-t border-b border-r border-gray-200 bg-gray-100 text-center"
+          className="sticky left-16 z-30 min-w-64 h-10 border-t border-b border-r border-gray-200 bg-gray-100 text-center shadow-sm"
         >
           <span className="text-xs text-gray-500">Company</span>
         </th>
