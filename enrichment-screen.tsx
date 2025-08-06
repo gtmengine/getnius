@@ -9,22 +9,9 @@ import {
     Sparkles,
     ArrowRight,
     Plus,
-    Globe,
-    Users,
-    DollarSign,
-    MapPin,
-    Calendar,
-    Mail,
-    Phone,
-    Database,
-    Target,
-    FileText,
-    Zap,
   Edit3,
   Save,
-  X,
-  CheckCircle,
-  AlertCircle
+  X
 } from "lucide-react";
 import { type Company } from "./lib/search-apis";
 import ColumnSelector from "./column-selector";
