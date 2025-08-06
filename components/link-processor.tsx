@@ -185,14 +185,11 @@ const LinkProcessor: React.FC<LinkProcessorProps> = ({
       {/* Input Section */}
       <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Add the links you want to research
-          </label>
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder="Paste URLs here (separated by spaces, commas, or new lines)...&#10;Example:&#10;https://openai.com&#10;https://anthropic.com&#10;https://notion.so"
+            placeholder="Paste URLs here (separated by spaces, commas, or new lines)...&#10;Example:&#10;https://notion.so"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             rows={4}
             disabled={isProcessing}

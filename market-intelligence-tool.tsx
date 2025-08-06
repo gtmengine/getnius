@@ -30,22 +30,27 @@ const MarketIntelligenceTool = React.memo(() => {
   const [customCategory, setCustomCategory] = useState("")
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [showNonRelevantList, setShowNonRelevantList] = useState(false)
+  const [enrichedCompanies, setEnrichedCompanies] = useState<Company[]>([]);
 
   // Separate relevant and non-relevant companies
-  const relevantCompanies = useMemo(() => 
-    companies.filter(company => company.relevance === "relevant"), 
-    [companies]
-  )
-  
-  const nonRelevantCompanies = useMemo(() => 
-    companies.filter(company => company.relevance === "not_relevant"), 
+  const relevantCompanies = useMemo(() =>
+    companies.filter(company => company.relevance === "relevant"),
     [companies]
   )
 
-  const pendingCompanies = useMemo(() => 
-    companies.filter(company => !company.relevance), 
+  const nonRelevantCompanies = useMemo(() =>
+    companies.filter(company => company.relevance === "not_relevant"),
     [companies]
   )
+
+  const pendingCompanies = useMemo(() =>
+    companies.filter(company => !company.relevance),
+    [companies]
+  )
+
+  const handleEnrichedData = useCallback((companies: Company[]) => {
+    setEnrichedCompanies(companies);
+  }, []);
 
   // Handle search execution
   const handleSearch = useCallback(async (queryOverride?: string) => {
@@ -100,14 +105,14 @@ const MarketIntelligenceTool = React.memo(() => {
     (companyId: string, isRelevant: boolean) => {
       const relevanceValue = isRelevant ? "relevant" : "not_relevant"
 
-      setCompanies(prev => 
-        prev.map(company => 
+      setCompanies(prev =>
+        prev.map(company =>
           company.id === companyId ? { ...company, relevance: relevanceValue } : company
         )
       )
 
-      setSearchResults(prev => 
-        prev.map(company => 
+      setSearchResults(prev =>
+        prev.map(company =>
           company.id === companyId ? { ...company, relevance: relevanceValue } : company
         )
       )
@@ -178,31 +183,27 @@ const MarketIntelligenceTool = React.memo(() => {
               </div>
             </div>
             <div className="flex">
-            {[
-              { id: "search", name: "Search", icon: Search },
-              { id: "enrich", name: "Enrich", icon: Database },
-              { id: "action", name: "Action", icon: Zap },
-              { id: "settings", name: "Settings", icon: Settings },
-            ].map((item, index) => {
+              {[
+                { id: "search", name: "Search", icon: Search },
+                { id: "enrich", name: "Enrich", icon: Database },
+                { id: "action", name: "Action", icon: Zap },
+                { id: "settings", name: "Settings", icon: Settings },
+              ].map((item, index) => {
                 const Icon = item.icon
                 const isActive = currentScreen === item.id
-                const isCompleted = index === 0 ? relevantCompanies.length > 0 : 
-                                    index === 1 ? relevantCompanies.length > 0 : false
+                const isCompleted = index === 0 ? relevantCompanies.length > 0 :
+                  index === 1 ? relevantCompanies.length > 0 : false
                 return (
                   <button
                     key={item.id}
                     onClick={() => setCurrentScreen(item.id)}
-                    className={`flex items-center gap-3 px-6 py-2 transition-colors relative rounded-md ${
-                      isActive
-                        ? "bg-blue-600 text-white"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`flex items-center gap-3 px-6 py-2 transition-colors relative rounded-md ${isActive
+                      ? "bg-blue-600 text-white"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                     <span className="font-medium">{item.name}</span>
-                    {isCompleted && !isActive && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
-                    )}
                   </button>
                 )
               })}
@@ -217,18 +218,18 @@ const MarketIntelligenceTool = React.memo(() => {
               >
                 {/* Telegram Paper Plane Icon */}
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-.14.04-.23.07-.48.16-2.9 1.84-2.9 1.84s-.41.26-.82.25c-.27-.01-.8-.15-1.19-.27-.48-.15-.87-.23-.83-.48.02-.13.18-.26.48-.4 0 0 4.4-1.8 5.94-2.43.65-.26 2.84-1.18 2.84-1.18s1.02-.4 1.02.26z"/>
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-.14.04-.23.07-.48.16-2.9 1.84-2.9 1.84s-.41.26-.82.25c-.27-.01-.8-.15-1.19-.27-.48-.15-.87-.23-.83-.48.02-.13.18-.26.48-.4 0 0 4.4-1.8 5.94-2.43.65-.26 2.84-1.18 2.84-1.18s1.02-.4 1.02.26z" />
                 </svg>
                 <span>Join the group</span>
               </a>
-              <button 
+              <button
                 className="p-2 hover:bg-gray-100 rounded-lg"
                 title="Subscribe to the newsletter"
                 onClick={() => window.open('https://gtmbe.substack.com/', '_blank')}
               >
                 <Bell className="w-5 h-5 text-gray-600" />
               </button>
-              <button 
+              <button
                 onClick={() => setCurrentScreen("settings")}
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
@@ -270,23 +271,28 @@ const MarketIntelligenceTool = React.memo(() => {
             setShowNonRelevantList={setShowNonRelevantList}
           />
         )}
-        
+
         {currentScreen === "enrich" && (
           <EnrichmentScreen
             relevantCompanies={relevantCompanies}
-            searchResults={searchResults}
             setCurrentScreen={setCurrentScreen}
             handleExport={handleExport}
+            handleEnrichedData={handleEnrichedData}
             searchQuery={searchQuery}
+            searchResults={searchResults}
             selectedCategory={selectedCategory}
             customCategory={customCategory}
           />
         )}
-        
+
         {currentScreen === "action" && (
-          <ActionScreen setCurrentScreen={setCurrentScreen} handleExport={handleExport} />
+          <ActionScreen
+            setCurrentScreen={setCurrentScreen}
+            handleExport={handleExport}
+            enrichedCompanies={enrichedCompanies}
+          />
         )}
-        
+
         {currentScreen === "settings" && (
           <SettingsScreen setCurrentScreen={setCurrentScreen} />
         )}
