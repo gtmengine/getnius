@@ -20,6 +20,11 @@ import {
   Target,
   FileText,
   Zap,
+  Edit3,
+  Save,
+  X,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { type Company } from "./lib/search-apis";
 import ColumnSelector from "./column-selector";
@@ -83,6 +88,17 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
   ]);
 
   const [isEnriching, setIsEnriching] = useState(false);
+  
+  // Second iteration functionality
+  const [evaluationPhase, setEvaluationPhase] = useState<'first' | 'second' | 'completed'>('first');
+  const [firstIterationResults, setFirstIterationResults] = useState<Company[]>([]);
+  const [showSecondIteration, setShowSecondIteration] = useState(false);
+
+  // Manual editing functionality
+  const [editingCell, setEditingCell] = useState<{companyId: string, field: string} | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
+  const [modifiedCompanies, setModifiedCompanies] = useState<Record<string, Partial<Company>>>({});
+  const [confirmedResults, setConfirmedResults] = useState<Set<string>>(new Set());
 
   const handleSelectAll = useCallback(() => {
     if (selectedCompanies.size === relevantCompanies.length) {
@@ -107,10 +123,131 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
   const handleEnrichSelected = useCallback(() => {
     console.log("Enriching selected companies:", Array.from(selectedCompanies));
     setIsEnriching(true);
+    
     setTimeout(() => {
       setIsEnriching(false);
+      
+      // After first iteration, store results and show second iteration option
+      if (evaluationPhase === 'first') {
+        const selectedCompaniesList = relevantCompanies.filter(company => 
+          selectedCompanies.has(company.id)
+        );
+        setFirstIterationResults(selectedCompaniesList);
+        setEvaluationPhase('completed');
+        setShowSecondIteration(true);
+      } else if (evaluationPhase === 'second') {
+        setEvaluationPhase('completed');
+        setShowSecondIteration(false);
+      }
     }, 3000);
-  }, [selectedCompanies]);
+  }, [selectedCompanies, evaluationPhase, relevantCompanies]);
+
+  const handleStartSecondIteration = useCallback(() => {
+    setEvaluationPhase('second');
+    setShowSecondIteration(false);
+    setSelectedCompanies(new Set()); // Reset selection for second iteration
+  }, []);
+
+  // Manual editing handlers
+  const handleStartEdit = useCallback((companyId: string, field: string, currentValue: string) => {
+    setEditingCell({ companyId, field });
+    setEditingValue(currentValue || '');
+  }, []);
+
+  const handleSaveEdit = useCallback(() => {
+    if (!editingCell) return;
+
+    setModifiedCompanies(prev => ({
+      ...prev,
+      [editingCell.companyId]: {
+        ...prev[editingCell.companyId],
+        [editingCell.field]: editingValue
+      }
+    }));
+
+    setEditingCell(null);
+    setEditingValue('');
+  }, [editingCell, editingValue]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingCell(null);
+    setEditingValue('');
+  }, []);
+
+  const handleConfirmResult = useCallback((companyId: string) => {
+    setConfirmedResults(prev => new Set([...prev, companyId]));
+  }, []);
+
+  const handleUnconfirmResult = useCallback((companyId: string) => {
+    setConfirmedResults(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(companyId);
+      return newSet;
+    });
+  }, []);
+
+  // Get the display value for a field (either modified or original)
+  const getFieldValue = useCallback((company: Company, field: string) => {
+    const modified = modifiedCompanies[company.id];
+    if (modified && field in modified) {
+      return modified[field as keyof Company] as string;
+    }
+    return company[field as keyof Company] as string;
+  }, [modifiedCompanies]);
+
+  // Render editable cell
+  const renderEditableCell = useCallback((company: Company, columnName: string, fieldKey: string) => {
+    const isEditing = editingCell?.companyId === company.id && editingCell?.field === fieldKey;
+    const currentValue = getFieldValue(company, fieldKey);
+    const isModified = modifiedCompanies[company.id] && fieldKey in (modifiedCompanies[company.id] || {});
+    
+    if (isEditing) {
+      return (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={editingValue}
+            onChange={(e) => setEditingValue(e.target.value)}
+            className="flex-1 px-2 py-1 border border-blue-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveEdit();
+              if (e.key === 'Escape') handleCancelEdit();
+            }}
+          />
+          <button
+            onClick={handleSaveEdit}
+            className="p-1 text-green-600 hover:bg-green-100 rounded"
+            title="Save"
+          >
+            <Save className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleCancelEdit}
+            className="p-1 text-red-600 hover:bg-red-100 rounded"
+            title="Cancel"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="group flex items-center justify-between">
+        <span className={`${isModified ? 'text-blue-600 font-medium' : ''}`}>
+          {currentValue || "—"}
+        </span>
+        <button
+          onClick={() => handleStartEdit(company.id, fieldKey, currentValue)}
+          className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-100 rounded transition-opacity"
+          title="Edit"
+        >
+          <Edit3 className="w-3 h-3" />
+        </button>
+      </div>
+    );
+  }, [editingCell, editingValue, getFieldValue, modifiedCompanies, handleStartEdit, handleSaveEdit, handleCancelEdit]);
 
   const enrichedCompanies = useMemo(() => 
     relevantCompanies.map(company => ({
@@ -136,7 +273,9 @@ return (
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center gap-2"
         >
             <Sparkles className="w-4 h-4" />
-            {isEnriching ? 'Enriching...' : `Enrich Selected (${selectedCompanies.size})`}
+            {isEnriching ? 'Enriching...' : 
+             evaluationPhase === 'second' ? `Second Iteration (${selectedCompanies.size})` :
+             `Enrich Selected (${selectedCompanies.size})`}
         </button>
         <button onClick={handleExport} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2">
             <Download className="w-4 h-4" />
@@ -168,7 +307,6 @@ return (
                     className="rounded border-gray-300"
                 />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
                 {selectedColumns.map(columnName => (
                 <th key={columnName} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -191,6 +329,23 @@ return (
                     />
                 </td>
                 <td className="px-4 py-4">
+                    <span
+                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        company.source === "firecrawl"
+                        ? "bg-purple-100 text-purple-700"
+                        : company.source === "google"
+                            ? "bg-blue-100 text-blue-700"
+                            : company.source === "exa"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-700"
+                    }`}
+                    >
+                    {company.source}
+                    </span>
+                </td>
+                {selectedColumns.map(columnName => (
+                    <td key={columnName} className="px-4 py-4 text-sm text-gray-900">
+                    {columnName === "Company Name" ? (
                     <div className="flex items-center gap-3">
                     {company.logo ? (
                         <img
@@ -211,36 +366,16 @@ return (
                         <div className="text-sm text-gray-500 truncate max-w-xs">{company.description}</div>
                     </div>
                     </div>
-                </td>
-                <td className="px-4 py-4">
-                    <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        company.source === "firecrawl"
-                        ? "bg-purple-100 text-purple-700"
-                        : company.source === "google"
-                            ? "bg-blue-100 text-blue-700"
-                            : company.source === "exa"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-700"
-                    }`}
-                    >
-                    {company.source}
-                    </span>
-                </td>
-                {selectedColumns.map(columnName => (
-                    <td key={columnName} className="px-4 py-4 text-sm text-gray-900">
-                    {columnName === "Company Name" ? (
-                        company.name || "—"
                     ) : columnName === "Industry" ? (
-                        company.industry || "—"
+                        renderEditableCell(company, columnName, "industry")
                     ) : columnName === "Funding" ? (
-                        company.funding || "—"
+                        renderEditableCell(company, columnName, "funding")
                     ) : columnName === "Employee Count" ? (
-                        company.employees || "—"
+                        renderEditableCell(company, columnName, "employees")
                     ) : columnName === "Location" ? (
-                        company.location || "—"
+                        renderEditableCell(company, columnName, "location")
                     ) : columnName === "Founded Year" ? (
-                        company.founded || "—"
+                        renderEditableCell(company, columnName, "founded")
                     ) : columnName === "Website" ? (
                         company.website ? (
                             <a
@@ -261,9 +396,9 @@ return (
                     ) : columnName === "Growth Rate" ? (
                         "—"
                     ) : columnName === "Description" ? (
-                        company.description || "—"
+                        renderEditableCell(company, columnName, "description")
                     ) : columnName === "Phone Number" ? (
-                        company.phone || "—"
+                        renderEditableCell(company, columnName, "phone")
                     ) : columnName === "CEO Name" ? (
                         "—"
                     ) : columnName === "Business Model" ? (
@@ -297,6 +432,7 @@ return (
                     <button
                         onClick={() => handleSelectCompany(company.id)}
                         className="p-1 hover:bg-gray-100 rounded"
+                        title="Select for enrichment"
                     >
                         {selectedCompanies.has(company.id) ? (
                         <Check className="w-4 h-4 text-green-600" />
@@ -304,9 +440,32 @@ return (
                         <Plus className="w-4 h-4 text-gray-400" />
                         )}
                     </button>
-                    <button className="p-1 hover:bg-gray-100 rounded">
+                    
+                    {/* Confirmation Button */}
+                    <button
+                        onClick={() => confirmedResults.has(company.id) ? 
+                            handleUnconfirmResult(company.id) : 
+                            handleConfirmResult(company.id)}
+                        className={`p-1 rounded transition-colors ${
+                            confirmedResults.has(company.id) 
+                                ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                                : 'hover:bg-gray-100 text-gray-400 hover:text-green-600'
+                        }`}
+                        title={confirmedResults.has(company.id) ? "Confirmed - click to unconfirm" : "Confirm result"}
+                    >
+                        <CheckCircle className="w-4 h-4" />
+                    </button>
+                    
+                    <button className="p-1 hover:bg-gray-100 rounded" title="View details">
                         <ExternalLink className="w-4 h-4 text-gray-400" />
                     </button>
+                    
+                    {/* Modified indicator */}
+                    {modifiedCompanies[company.id] && (
+                        <div className="p-1" title="Data has been modified">
+                            <AlertCircle className="w-4 h-4 text-blue-500" />
+                        </div>
+                    )}
                     </div>
                 </td>
                 </tr>
@@ -329,8 +488,54 @@ return (
       </div>
     )}
 
+    {/* Second Iteration Options */}
+    {showSecondIteration && (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-green-900">First Iteration Complete</h3>
+            <p className="text-sm text-green-700 mt-1">
+              {firstIterationResults.length} companies processed. Would you like to run a second iteration for deeper analysis?
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowSecondIteration(false)}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+            >
+              Skip
+            </button>
+            <button
+              onClick={handleStartSecondIteration}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Start Second Iteration
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Phase Indicator */}
+    {evaluationPhase !== 'first' && (
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${evaluationPhase === 'second' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
+          <span className="text-sm font-medium text-blue-900">
+            {evaluationPhase === 'second' ? 'Second Iteration Mode' : 'Evaluation Complete'}
+          </span>
+          {firstIterationResults.length > 0 && (
+            <span className="text-sm text-blue-700">
+              ({firstIterationResults.length} companies from first iteration)
+            </span>
+          )}
+        </div>
+      </div>
+    )}
+
     {/* Summary Stats */}
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-white p-4 rounded-lg shadow-sm">
         <div className="text-2xl font-bold text-gray-900">{relevantCompanies.length}</div>
         <div className="text-sm text-gray-600">Relevant Companies</div>
@@ -346,12 +551,66 @@ return (
         <div className="text-sm text-gray-600">Enriched</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div className="text-2xl font-bold text-green-600">
+            {confirmedResults.size}
+        </div>
+        <div className="text-sm text-gray-600">Confirmed Results</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div className="text-2xl font-bold text-blue-600">
+            {Object.keys(modifiedCompanies).length}
+        </div>
+        <div className="text-sm text-gray-600">Modified Entries</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
         <div className="text-2xl font-bold text-gray-600">
             {selectedColumns.length}
         </div>
         <div className="text-sm text-gray-600">Active Columns</div>
         </div>
     </div>
+
+    {/* Bulk Actions */}
+    {(Object.keys(modifiedCompanies).length > 0 || confirmedResults.size > 0) && (
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-medium text-yellow-900">Pending Changes</h3>
+            <p className="text-sm text-yellow-700 mt-1">
+              {Object.keys(modifiedCompanies).length > 0 && 
+                `${Object.keys(modifiedCompanies).length} modified entries`}
+              {Object.keys(modifiedCompanies).length > 0 && confirmedResults.size > 0 && " • "}
+              {confirmedResults.size > 0 && 
+                `${confirmedResults.size} confirmed results`}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setModifiedCompanies({});
+                setConfirmedResults(new Set());
+              }}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+            >
+              Reset All
+            </button>
+            <button
+              onClick={() => {
+                // Here you would typically save to backend
+                console.log("Saving modifications:", modifiedCompanies);
+                console.log("Confirmed results:", Array.from(confirmedResults));
+                // For demo, just show success
+                alert(`Saved ${Object.keys(modifiedCompanies).length} modifications and ${confirmedResults.size} confirmations!`);
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Save All Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Action Buttons */}
     <div className="flex justify-between">

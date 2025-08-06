@@ -15,6 +15,7 @@ import {
   FileText,
   ArrowRight,
   Loader2,
+  RotateCcw,
 } from "lucide-react"
 import { type Company } from "./lib/search-apis"
 import { SearchExamples } from "./components/search-examples"
@@ -78,10 +79,10 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
   setShowCustomInput,
   setShowNonRelevantList
 }) => {
-  // State for link input functionality
-  const [links, setLinks] = React.useState<string[]>([]);
-  const [newLink, setNewLink] = React.useState("");
-  const [showLinkInput, setShowLinkInput] = React.useState(false);
+  // State for dynamic link input functionality
+  const [linkFields, setLinkFields] = React.useState<{id: string, value: string}[]>([
+    { id: crypto.randomUUID(), value: "" }
+  ]);
 
   // State for CSV parser functionality
   const [showCSVParser, setShowCSVParser] = React.useState(false);
@@ -97,27 +98,57 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
     [handleExampleSelect],
   )
 
-  // Handle adding a new link
-  const handleAddLink = () => {
-    if (newLink.trim() && !links.includes(newLink.trim())) {
-      setLinks([...links, newLink.trim()]);
-      setNewLink("");
-      setShowLinkInput(false);
-    }
+  // Handle dynamic link field changes
+  const handleLinkFieldChange = (fieldId: string, value: string) => {
+    setLinkFields(prev => {
+      const updated = prev.map(field => 
+        field.id === fieldId ? { ...field, value } : field
+      );
+      
+      // Auto-add new field if current one has value and is the last field
+      const lastField = updated[updated.length - 1];
+      if (lastField.value.trim() && lastField.id === fieldId) {
+        updated.push({ id: crypto.randomUUID(), value: "" });
+      }
+      
+      return updated;
+    });
   };
 
-  // Handle removing a link
-  const handleRemoveLink = (linkToRemove: string) => {
-    setLinks(links.filter(link => link !== linkToRemove));
+  // Handle removing a link field
+  const handleRemoveLinkField = (fieldId: string) => {
+    setLinkFields(prev => {
+      // Always keep at least one field
+      if (prev.length <= 1) {
+        return [{ id: crypto.randomUUID(), value: "" }];
+      }
+      return prev.filter(field => field.id !== fieldId);
+    });
   };
 
-  // Handle link input key press
-  const handleLinkKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleAddLink();
-    } else if (e.key === "Escape") {
-      setShowLinkInput(false);
-      setNewLink("");
+  // Handle clearing a link field
+  const handleClearLinkField = (fieldId: string) => {
+    setLinkFields(prev => 
+      prev.map(field => 
+        field.id === fieldId ? { ...field, value: "" } : field
+      )
+    );
+  };
+
+  // Get valid links (non-empty values)
+  const getValidLinks = () => {
+    return linkFields
+      .map(field => field.value.trim())
+      .filter(value => value.length > 0);
+  };
+
+  // URL validation helper
+  const isValidUrl = (string: string) => {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;
     }
   };
 
@@ -289,81 +320,95 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
           </button>
         </div>
 
-        {/* Link Input Section */}
+        {/* Dynamic Link Input Section */}
         <div className="space-y-3">
-          {/* Add Link Button */}
-          {!showLinkInput && (
-            <button
-              onClick={() => setShowLinkInput(true)}
-              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
-              tabIndex={10}
-            >
-              <ExternalLink className="w-4 h-4" />
-              Add Reference Link
-            </button>
-          )}
-
-          {/* Link Input Field */}
-          {showLinkInput && (
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={newLink}
-                onChange={(e) => setNewLink(e.target.value)}
-                onKeyDown={handleLinkKeyPress}
-                placeholder="Enter URL (e.g., https://example.com)"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                autoFocus
-                tabIndex={11}
-              />
-              <button
-                onClick={handleAddLink}
-                disabled={!newLink.trim()}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-300"
-                tabIndex={12}
-              >
-                Add
-              </button>
-              <button
-                onClick={() => {
-                  setShowLinkInput(false);
-                  setNewLink("");
-                }}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                tabIndex={13}
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-
-          {/* Display Added Links */}
-          {links.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ExternalLink className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">Reference Links ({links.length})</span>
-              </div>
-              <div className="space-y-2">
-                {links.map((link, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-md">
-                    <a
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 text-sm text-blue-600 hover:text-blue-700 truncate"
-                    >
-                      {link}
-                    </a>
-                    <button
-                      onClick={() => handleRemoveLink(link)}
-                      className="p-1 text-gray-400 hover:text-red-500"
-                      title="Remove link"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+          <div className="flex items-center gap-2">
+            <ExternalLink className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">
+              Reference Links {getValidLinks().length > 0 && `(${getValidLinks().length})`}
+            </span>
+          </div>
+          
+          <div className="space-y-3">
+            {linkFields.map((field, index) => {
+              const isValid = field.value ? isValidUrl(field.value) : true;
+              const showActions = field.value.trim() || linkFields.length > 1;
+              
+              return (
+                <div key={field.id} className="group">
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <input
+                        type="url"
+                        value={field.value}
+                        onChange={(e) => handleLinkFieldChange(field.id, e.target.value)}
+                        placeholder={index === 0 ? "Enter URL (e.g., https://example.com)" : "Enter another URL..."}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors ${
+                          !isValid 
+                            ? 'border-red-300 focus:ring-red-500 bg-red-50' 
+                            : 'border-gray-300 focus:ring-blue-500'
+                        }`}
+                        tabIndex={10 + index}
+                      />
+                      {!isValid && field.value && (
+                        <p className="text-xs text-red-600 mt-1">Please enter a valid URL</p>
+                      )}
+                    </div>
+                    
+                    {/* Action buttons - show on hover or when field has value */}
+                    <div className={`flex gap-1 transition-opacity ${
+                      showActions ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                    }`}>
+                      {/* Clear button */}
+                      {field.value && (
+                        <button
+                          onClick={() => handleClearLinkField(field.id)}
+                          className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded"
+                          title="Clear this field"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      )}
+                      
+                      {/* Remove button - only show if more than one field or field has value */}
+                      {(linkFields.length > 1 || field.value) && (
+                        <button
+                          onClick={() => handleRemoveLinkField(field.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                          title="Remove this field"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                ))}
+                  
+                  {/* Show clickable link if valid URL */}
+                  {field.value && isValid && (
+                    <div className="mt-1 ml-1">
+                      <a
+                        href={field.value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:text-blue-700 underline truncate max-w-md inline-block"
+                      >
+                        🔗 {field.value}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Summary of valid links */}
+          {getValidLinks().length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">
+                  {getValidLinks().length} valid URL{getValidLinks().length === 1 ? '' : 's'} ready for processing
+                </span>
               </div>
             </div>
           )}
@@ -545,8 +590,8 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                     </div>
                   </div>
                 ))}
-              </div>
-              
+          </div>
+
               <div className="mt-3 pt-3 border-t border-blue-200">
                 <button
                   onClick={() => {
@@ -559,7 +604,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                 >
                   Search First Query
                 </button>
-              </div>
+          </div>
             </div>
           )}
 
