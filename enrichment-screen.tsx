@@ -42,6 +42,7 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     // Updated column structure to match the new ColumnSelector
     const [availableColumns] = useState([
         'Company Name',
+        'Source',
         'Industry',
         'Funding',
         'Employee Count',
@@ -65,6 +66,21 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
         switch (columnName) {
             case 'Company Name':
                 return company.name || '—';
+            case 'Source':
+                return (
+                    <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${company.source === "firecrawl"
+                            ? "bg-purple-100 text-purple-700"
+                            : company.source === "google"
+                                ? "bg-blue-100 text-blue-700"
+                                : company.source === "exa"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-gray-100 text-gray-700"
+                            }`}
+                    >
+                        {company.source}
+                    </span>
+                );
             case 'Industry':
                 return company.industry || '—';
             case 'Funding':
@@ -114,7 +130,7 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     }, [suggestedColumns, useCaseContext]);
 
     const [selectedColumns, setSelectedColumns] = useState([
-        'Company Name', 'Industry', 'Funding', 'Employee Count'
+        'Company Name', 'Source', 'Industry', 'Funding', 'Employee Count'
     ]);
   const [isEnriching, setIsEnriching] = useState(false);
   
