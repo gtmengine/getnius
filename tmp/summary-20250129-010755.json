@@ -1,4 +1,0 @@
-{
-  "summary": "Fixed the editable cell functionality in the enrichment screen by replacing getColumnValue calls with renderEditableCell for editable columns. Added proper column field mapping to determine which columns should be editable and their corresponding data fields. The Enter key save functionality was already implemented correctly in the renderEditableCell function.",
-  "current_status": "The enrichment screen now properly supports cell editing with Enter key saving, Escape key canceling, and visual feedback for modified values. All standard columns except Website are now editable."
-}

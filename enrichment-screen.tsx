@@ -61,38 +61,6 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
         customCategory
     };
 
-    // Define which columns are editable and their corresponding company field keys
-    const getColumnFieldMapping = (columnName: string): { fieldKey: string; isEditable: boolean } => {
-        switch (columnName) {
-            case 'Company Name':
-                return { fieldKey: 'name', isEditable: true };
-            case 'Industry':
-                return { fieldKey: 'industry', isEditable: true };
-            case 'Funding':
-                return { fieldKey: 'funding', isEditable: true };
-            case 'Employee Count':
-                return { fieldKey: 'employees', isEditable: true };
-            case 'Location':
-                return { fieldKey: 'location', isEditable: true };
-            case 'Founded Year':
-                return { fieldKey: 'founded', isEditable: true };
-            case 'Website':
-                return { fieldKey: 'website', isEditable: false }; // Special rendering
-            case 'Description':
-                return { fieldKey: 'description', isEditable: true };
-            case 'Phone Number':
-                return { fieldKey: 'phone', isEditable: true };
-            case 'CEO Name':
-                return { fieldKey: 'ceo', isEditable: true };
-            case 'Business Model':
-                return { fieldKey: 'businessModel', isEditable: true };
-            case 'Social Media':
-                return { fieldKey: 'socialMedia', isEditable: true };
-            default:
-                return { fieldKey: columnName.toLowerCase().replace(/\s+/g, ''), isEditable: true };
-        }
-    };
-
     const getColumnValue = (columnName: string, company: Company): React.ReactNode => {
         switch (columnName) {
             case 'Company Name':
@@ -414,17 +382,11 @@ const handleEnrichSelected = useCallback(() => {
                                             {company.source}
                                         </span>
                                     </td>
-                                    {selectedColumns.map(columnName => {
-                                        const { fieldKey, isEditable } = getColumnFieldMapping(columnName);
-                                        return (
-                                            <td key={columnName} className="px-4 py-4 text-sm text-gray-900">
-                                                {isEditable ? 
-                                                    renderEditableCell(company, columnName, fieldKey) : 
-                                                    getColumnValue(columnName, company)
-                                                }
-                                            </td>
-                                        );
-                                    })}
+                                    {selectedColumns.map(columnName => (
+                                        <td key={columnName} className="px-4 py-4 text-sm text-gray-900">
+                                            {getColumnValue(columnName, company)}
+                                        </td>
+                                    ))}
                                     <td className="px-4 py-4">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${company.enriched
