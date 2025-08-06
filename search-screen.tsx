@@ -20,7 +20,6 @@ import {
 import { type Company } from "./lib/search-apis"
 import { SearchExamples } from "./components/search-examples"
 import { AutoCompleteSearch } from "./components/auto-complete-search"
-import EnhancedSearchSuggestions from "./components/enhanced-search-suggestions"
 import CSVParser from "./components/csv-parser"
 import LinkProcessor from "./components/link-processor"
 
@@ -79,7 +78,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
   setShowNonRelevantList
 }) => {
   // State for dynamic link input functionality
-  const [linkFields, setLinkFields] = React.useState<{id: string, value: string}[]>([
+  const [linkFields, setLinkFields] = React.useState<{ id: string, value: string }[]>([
     { id: crypto.randomUUID(), value: "" }
   ]);
 
@@ -100,16 +99,16 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
   // Handle dynamic link field changes
   const handleLinkFieldChange = (fieldId: string, value: string) => {
     setLinkFields(prev => {
-      const updated = prev.map(field => 
+      const updated = prev.map(field =>
         field.id === fieldId ? { ...field, value } : field
       );
-      
+
       // Auto-add new field if current one has value and is the last field
       const lastField = updated[updated.length - 1];
       if (lastField.value.trim() && lastField.id === fieldId) {
         updated.push({ id: crypto.randomUUID(), value: "" });
       }
-      
+
       return updated;
     });
   };
@@ -127,8 +126,8 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
 
   // Handle clearing a link field
   const handleClearLinkField = (fieldId: string) => {
-    setLinkFields(prev => 
-      prev.map(field => 
+    setLinkFields(prev =>
+      prev.map(field =>
         field.id === fieldId ? { ...field, value: "" } : field
       )
     );
@@ -183,13 +182,12 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                 {nonRelevantCompanies.length} Non-Relevant Companies
               </span>
             </div>
-            <ArrowRight 
-              className={`w-4 h-4 text-gray-500 transition-transform ${
-                showNonRelevantList ? 'rotate-90' : ''
-              }`} 
+            <ArrowRight
+              className={`w-4 h-4 text-gray-500 transition-transform ${showNonRelevantList ? 'rotate-90' : ''
+                }`}
             />
           </button>
-          
+
           {showNonRelevantList && (
             <div className="mt-4 space-y-2 max-h-48 overflow-y-auto">
               {nonRelevantCompanies.map((company) => (
@@ -229,9 +227,8 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                 setSelectedCategory(category);
                 setShowCustomInput(false);
               }}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                selectedCategory === category ? "bg-blue-600 text-white" : "text-gray-600 hover:text-gray-900"
-              }`}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${selectedCategory === category ? "bg-blue-600 text-white" : "text-gray-600 hover:text-gray-900"
+                }`}
               tabIndex={3 + index}
             >
               {category}
@@ -266,11 +263,10 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                 setShowCustomInput(true);
                 setCustomCategory("");
               }}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                !["People", "Companies", "Research Papers", "Articles", "Products"].includes(selectedCategory)
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${!["People", "Companies", "Research Papers", "Articles", "Products"].includes(selectedCategory)
                   ? "bg-blue-600 text-white"
                   : "text-gray-600 hover:text-gray-900"
-              }`}
+                }`}
               tabIndex={8}
             >
               {!["People", "Companies", "Research Papers", "Articles", "Products"].includes(selectedCategory) ? selectedCategory : "Other"}
@@ -290,10 +286,10 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
               searchQuery.length > 0
                 ? `Searching for "${searchQuery}"...`
                 : "Enter a request ... (e.g., AI meeting transcription tools)"
-             }
-             className="flex-1"
-             tabIndex={1}
-           />
+            }
+            className="flex-1"
+            tabIndex={1}
+          />
 
           <button
             onClick={() => {
@@ -301,10 +297,10 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                 handleSearch(searchQuery)
               }
             }}
-             disabled={!searchQuery.trim() || isSearching}
-             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2 whitespace-nowrap"
-             tabIndex={2}
-           >
+            disabled={!searchQuery.trim() || isSearching}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2 whitespace-nowrap"
+            tabIndex={2}
+          >
             {isSearching ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -327,12 +323,12 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
               Reference Links {getValidLinks().length > 0 && `(${getValidLinks().length})`}
             </span>
           </div>
-          
+
           <div className="space-y-3">
             {linkFields.map((field, index) => {
               const isValid = field.value ? isValidUrl(field.value) : true;
               const showActions = field.value.trim() || linkFields.length > 1;
-              
+
               return (
                 <div key={field.id} className="group">
                   <div className="flex gap-2 items-start">
@@ -342,22 +338,20 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                         value={field.value}
                         onChange={(e) => handleLinkFieldChange(field.id, e.target.value)}
                         placeholder={index === 0 ? "Enter URL (e.g., https://example.com)" : "Enter another URL..."}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors ${
-                          !isValid 
-                            ? 'border-red-300 focus:ring-red-500 bg-red-50' 
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors ${!isValid
+                            ? 'border-red-300 focus:ring-red-500 bg-red-50'
                             : 'border-gray-300 focus:ring-blue-500'
-                        }`}
+                          }`}
                         tabIndex={10 + index}
                       />
                       {!isValid && field.value && (
                         <p className="text-xs text-red-600 mt-1">Please enter a valid URL</p>
                       )}
                     </div>
-                    
+
                     {/* Action buttons - show on hover or when field has value */}
-                    <div className={`flex gap-1 transition-opacity ${
-                      showActions ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                    }`}>
+                    <div className={`flex gap-1 transition-opacity ${showActions ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}>
                       {/* Clear button */}
                       {field.value && (
                         <button
@@ -368,7 +362,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                           <RotateCcw className="w-4 h-4" />
                         </button>
                       )}
-                      
+
                       {/* Remove button - only show if more than one field or field has value */}
                       {(linkFields.length > 1 || field.value) && (
                         <button
@@ -381,7 +375,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Show clickable link if valid URL */}
                   {field.value && isValid && (
                     <div className="mt-1 ml-1">
@@ -399,7 +393,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
               );
             })}
           </div>
-          
+
           {/* Summary of valid links */}
           {getValidLinks().length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
@@ -472,7 +466,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                     <ExternalLink className="w-6 h-6 text-green-600" />
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">Add Links for Research</h3>
                   <p className="text-sm text-gray-500 mt-1">
@@ -489,11 +483,11 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
             </div>
 
             {/* CSV Parser Section */}
-              <CSVParser
-                onDataProcessed={handleCSVDataProcessed}
-                onSearchFromCSV={handleSearchFromCSV}
-                className="mt-4"
-              />
+            <CSVParser
+              onDataProcessed={handleCSVDataProcessed}
+              onSearchFromCSV={handleSearchFromCSV}
+              className="mt-4"
+            />
           </div>
 
           {/* CSV Search Queries Display */}
@@ -513,7 +507,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                   Clear All
                 </button>
               </div>
-              
+
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {csvSearchQueries.map((query, index) => (
                   <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
@@ -534,7 +528,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                     </div>
                   </div>
                 ))}
-          </div>
+              </div>
 
               <div className="mt-3 pt-3 border-t border-blue-200">
                 <button
@@ -548,7 +542,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                 >
                   Search First Query
                 </button>
-          </div>
+              </div>
             </div>
           )}
 
@@ -569,7 +563,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                   Clear All
                 </button>
               </div>
-              
+
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {processedLinks.map((link, index) => (
                   <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
@@ -680,15 +674,14 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium text-gray-900">{company.name}</h4>
                           <span
-                            className={`text-xs px-2 py-1 rounded-full ${
-                              company.source === "firecrawl"
+                            className={`text-xs px-2 py-1 rounded-full ${company.source === "firecrawl"
                                 ? "bg-purple-100 text-purple-700"
                                 : company.source === "google"
                                   ? "bg-blue-100 text-blue-700"
                                   : company.source === "exa"
                                     ? "bg-green-100 text-green-700"
                                     : "bg-gray-100 text-gray-700"
-                            }`}
+                              }`}
                           >
                             {company.source}
                           </span>
@@ -726,22 +719,20 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                       <div className="flex items-center gap-2 ml-4">
                         <button
                           onClick={() => handleRelevanceFeedback(company.id, true)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            company.relevance === "relevant"
+                          className={`p-2 rounded-lg transition-colors ${company.relevance === "relevant"
                               ? "bg-green-100 text-green-600"
                               : "hover:bg-green-50 text-gray-400 hover:text-green-600"
-                          }`}
+                            }`}
                           title="Mark as relevant"
                         >
                           <Check className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleRelevanceFeedback(company.id, false)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            company.relevance === "not_relevant"
+                          className={`p-2 rounded-lg transition-colors ${company.relevance === "not_relevant"
                               ? "bg-red-100 text-red-600"
                               : "hover:bg-red-50 text-gray-400 hover:text-red-600"
-                          }`}
+                            }`}
                           title="Mark as not relevant"
                         >
                           <X className="w-4 h-4" />
