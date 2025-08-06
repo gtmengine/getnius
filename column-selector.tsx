@@ -15,13 +15,13 @@ interface ColumnSelectorProps {
   handleSelectAll: () => void;
 }
 
-const ColumnSelector: React.FC<ColumnSelectorProps> = ({
+const ColumnSelector: React.FC<ColumnSelectorProps> = ({ 
   availableColumns = [
-    'Company Name',
-    'Industry',
-    'Revenue',
-    'Employee Count',
-    'Location',
+    'Company Name', 
+    'Industry', 
+    'Revenue', 
+    'Employee Count', 
+    'Location', 
     'Founded Year',
     'Website',
     'LinkedIn',
@@ -38,7 +38,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
     'Company Size',
     'Business Model'
   ],
-  selectedColumns = ['Company Name', 'Industry'],
+  selectedColumns = ['Company Name', 'Industry'], 
   onChange = (selected) => console.log('Selected:', selected),
   columnReasons = {},
 
@@ -48,44 +48,30 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
   handleSelectAll
 }) => {
   const [internalSelected, setInternalSelected] = useState(selectedColumns);
-  const [showCustomInput, setShowCustomInput] = useState(false);
-  const [customColumnName, setCustomColumnName] = useState("");
-
+  
   const handleToggleColumn = (column: string) => {
     const newSelected = internalSelected.includes(column)
       ? internalSelected.filter(col => col !== column)
       : [...internalSelected, column];
-
+    
     setInternalSelected(newSelected);
     onChange(newSelected);
   };
 
-  const handleSubmitCustom = () => {
-    if (!customColumnName.trim()) {
-      setShowCustomInput(false);
-      return;
+  const handleAddCustom = () => {
+    const customName = window.prompt('Enter custom column name:');
+    if (customName && customName.trim()) {
+      const trimmedName = customName.trim();
+      if (!internalSelected.includes(trimmedName) && 
+          !availableColumns.includes(trimmedName) && 
+          !suggestedColumns.includes(trimmedName)) {
+        const newSelected = [...internalSelected, trimmedName];
+        setInternalSelected(newSelected);
+        onChange(newSelected);
+      } else {
+        alert('Column name already exists');
+      }
     }
-
-    const trimmedName = customColumnName.trim();
-    if (
-      !internalSelected.includes(trimmedName) &&
-      !availableColumns.includes(trimmedName) &&
-      !suggestedColumns.includes(trimmedName)
-    ) {
-      const newSelected = [...internalSelected, trimmedName];
-      setInternalSelected(newSelected);
-      onChange(newSelected);
-    } else {
-      // Optional: Show error state
-    }
-
-    setShowCustomInput(false);
-    setCustomColumnName("");
-  };
-
-  const handleCancelCustom = () => {
-    setShowCustomInput(false);
-    setCustomColumnName("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, action: string, column: string | null = null) => {
@@ -94,7 +80,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
       if (action === 'toggle' && column) {
         handleToggleColumn(column);
       } else if (action === 'addCustom') {
-        setShowCustomInput(true); // Open input instead of triggering alert
+        handleAddCustom();
       }
     }
   };
@@ -103,31 +89,31 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
   const selectedAvailable = availableColumns.filter(col => internalSelected.includes(col));
   const unselectedAvailable = availableColumns.filter(col => !internalSelected.includes(col));
   const unselectedSuggestions = suggestedColumns.filter(col => !internalSelected.includes(col));
-  const customColumns = internalSelected.filter(col =>
+  const customColumns = internalSelected.filter(col => 
     !availableColumns.includes(col) && !suggestedColumns.includes(col)
   );
-
-  const allDisplayColumns = useMemo(() => {
-    // Combine all possible columns
-    const allPossible = [...availableColumns, ...suggestedColumns];
-
-    // Remove duplicates while preserving order
-    const uniqueColumns = allPossible.filter(
-      (item, index) => allPossible.indexOf(item) === index
-    );
-
-    // Create display order
-    return uniqueColumns.sort((a, b) => {
-      const aSelected = internalSelected.includes(a);
-      const bSelected = internalSelected.includes(b);
-
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-
-      // Keep original order for same selection status
-      return allPossible.indexOf(a) - allPossible.indexOf(b);
-    });
-  }, [availableColumns, suggestedColumns, internalSelected]);
+  
+const allDisplayColumns = useMemo(() => {
+  // Combine all possible columns
+  const allPossible = [...availableColumns, ...suggestedColumns];
+  
+  // Remove duplicates while preserving order
+  const uniqueColumns = allPossible.filter(
+    (item, index) => allPossible.indexOf(item) === index
+  );
+  
+  // Create display order
+  return uniqueColumns.sort((a, b) => {
+    const aSelected = internalSelected.includes(a);
+    const bSelected = internalSelected.includes(b);
+    
+    if (aSelected && !bSelected) return -1;
+    if (!aSelected && bSelected) return 1;
+    
+    // Keep original order for same selection status
+    return allPossible.indexOf(a) - allPossible.indexOf(b);
+  });
+}, [availableColumns, suggestedColumns, internalSelected]);
 
   return (
     <thead className="bg-gray-50">
@@ -141,15 +127,15 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
             className="rounded border-gray-300"
           />
         </th>
-
+        
         {/* Company header */}
-        <th
+        <th 
           className="sticky left-12 z-30 h-10 border-t border-b border-r border-gray-200 bg-gray-100 text-center"
         >
           <span className="text-xs text-gray-500">Company</span>
         </th>
         {/* Source header */}
-        <th
+        <th 
           className="w-32 h-10 border-t border-b border-r border-gray-200 bg-gray-100 text-center"
         >
           <span className="text-xs text-gray-500">Source</span>
@@ -160,22 +146,22 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
           const isSelected = internalSelected.includes(column);
           const isSuggestion = suggestedColumns.includes(column) && !isSelected;
           const isAvailable = availableColumns.includes(column);
-
+          
           return (
             <th
               key={column}
               className={`
                 relative min-w-32 max-w-48 h-10 border-t border-b border-r border-gray-200
-                ${isSelected
-                  ? 'bg-blue-100 text-blue-800'
-                  : isSuggestion
+                ${isSelected 
+                  ? 'bg-blue-100 text-blue-800' 
+                  : isSuggestion 
                     ? 'bg-gray-100 text-gray-500 hover:bg-gray-150'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
                 }
                 transition-colors duration-150
               `}
             >
-              <div
+              <div 
                 className="h-full w-full flex items-center justify-center cursor-pointer"
                 tabIndex={0}
                 role="button"
@@ -188,31 +174,31 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                 {isSelected && (
                   <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
                 )}
-
+                
                 {/* Suggestion indicator */}
                 {isSuggestion && (
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gray-400 opacity-50"></div>
                 )}
-
+                
                 <div className="flex items-center px-2 w-full justify-center">
                   {/* Plus icon for suggestions */}
                   {isSuggestion && (
                     <Plus size={12} className="mr-1 text-gray-400" />
                   )}
-
-                  <span
+                  
+                  <span 
                     className={`text-sm font-medium truncate ${isSuggestion ? 'italic' : ''}`}
                     title={isSuggestion && columnReasons[column] ? columnReasons[column] : undefined}
                   >
                     {column}
                   </span>
-
+                  
                   {/* Info icon for suggested columns with reasons */}
                   {isSuggestion && columnReasons[column] && (
                     <Info size={10} className="ml-1 text-gray-400" />
                   )}
                 </div>
-
+                
                 {/* Column letter (like Google Sheets) */}
                 <div className="absolute top-1 right-1 text-xs text-gray-400">
                   {String.fromCharCode(65 + (allDisplayColumns.indexOf(column) % 26))}
@@ -221,52 +207,23 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
             </th>
           );
         })}
-
+        
         {/* Add Custom Column */}
-        <th
+        <th 
           className="min-w-32 h-10 border-t border-b border-r border-gray-200 bg-white hover:bg-gray-50"
           style={{ borderLeft: 'none' }}
         >
-          {showCustomInput ? (
-            <div className="flex gap-1 p-1">
-              <input
-                autoFocus
-                type="text"
-                className="flex-1 px-2 py-1 border rounded text-sm"
-                value={customColumnName}
-                onChange={(e) => setCustomColumnName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSubmitCustom();
-                  if (e.key === "Escape") handleCancelCustom();
-                }}
-                placeholder="Column name..."
-              />
-              <button
-                onClick={handleSubmitCustom}
-                className="px-2 bg-blue-500 text-white rounded text-sm"
-              >
-                Add
-              </button>
-              <button
-                onClick={handleCancelCustom}
-                className="px-2 bg-gray-200 rounded text-sm"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
-            <div
-              className="h-full w-full flex items-center justify-center cursor-pointer"
-              tabIndex={0}
-              role="button"
-              aria-label="Add custom column"
-              onClick={() => setShowCustomInput(true)}
-              onKeyDown={(e) => handleKeyDown(e, 'addCustom')}
-            >
-              <Plus size={16} className="text-gray-400 mr-1" />
-              <span className="text-sm text-gray-500">Add Custom</span>
-            </div>
-          )}
+          <div
+            className="h-full w-full flex items-center justify-center cursor-pointer"
+            tabIndex={0}
+            role="button"
+            aria-label="Add custom column"
+            onClick={handleAddCustom}
+            onKeyDown={(e) => handleKeyDown(e, 'addCustom')}
+          >
+            <Plus size={16} className="text-gray-400 mr-1" />
+            <span className="text-sm text-gray-500">Add Custom</span>
+          </div>
         </th>
       </tr>
     </thead>
