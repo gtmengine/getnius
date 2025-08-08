@@ -20,7 +20,7 @@ import {
 import { type Company } from "./lib/search-apis"
 import { SearchExamples } from "./components/search-examples"
 import { AutoCompleteSearch } from "./components/auto-complete-search"
-import EnhancedSearchSuggestions from "./components/enhanced-search-suggestions"
+
 import CSVParser from "./components/csv-parser"
 import LinkProcessor from "./components/link-processor"
 
