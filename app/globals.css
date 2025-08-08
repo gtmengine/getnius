@@ -2,14 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom background pattern for auth screen */
-.bg-grid-pattern {
-  background-image: 
-    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
-  background-size: 50px 50px;
-}
-
 body {
   font-family: 'PT Sans', Arial, Helvetica, sans-serif;
 }

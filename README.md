@@ -39,14 +39,6 @@ For enhanced search capabilities, you can add the following environment variable
 Create a `.env.local` file in the root directory:
 
 ```env
-# NextAuth Configuration
-NEXTAUTH_SECRET=your_nextauth_secret_here
-NEXTAUTH_URL=http://localhost:3000
-
-# Google OAuth (https://console.developers.google.com/)
-GOOGLE_CLIENT_ID=your_google_client_id_here
-GOOGLE_CLIENT_SECRET=your_google_client_secret_here
-
 # Firecrawl API Key (https://firecrawl.dev/)
 FIRECRAWL_API_KEY=your_firecrawl_api_key_here
 
@@ -58,40 +50,12 @@ GOOGLE_SEARCH_ENGINE_ID=your_google_search_engine_id_here
 EXA_API_KEY=your_exa_api_key_here
 ```
 
-## Authentication Setup
-
-### Google OAuth Setup (Required)
-
-1. **Go to Google Cloud Console**: Visit [https://console.developers.google.com/](https://console.developers.google.com/)
-2. **Create a new project** or select an existing one
-3. **Enable the Google+ API**:
-   - Go to "APIs & Services" > "Library"
-   - Search for "Google+ API" and enable it
-4. **Create OAuth credentials**:
-   - Go to "APIs & Services" > "Credentials"
-   - Click "Create Credentials" > "OAuth client ID"
-   - Select "Web application"
-   - Add authorized redirect URIs: `http://localhost:3000/api/auth/callback/google`
-5. **Copy your Client ID and Client Secret** to your `.env.local` file
-
-### Generate NextAuth Secret
-
-```bash
-npx auth secret
-```
-
-Or generate a random secret:
-```bash
-openssl rand -base64 32
-```
-
 ## How to Use
 
-1. **Sign in** with your Google account
-2. **Enter a search query** in the search bar (e.g., "AI meeting transcription tools")
-3. **Select from suggestions** or use the quick completion pills
-4. **Review results** and mark companies as relevant/not relevant
-5. **Export your findings** or continue to enrichment
+1. **Enter a search query** in the search bar (e.g., "AI meeting transcription tools")
+2. **Select from suggestions** or use the quick completion pills
+3. **Review results** and mark companies as relevant/not relevant
+4. **Export your findings** or continue to enrichment
 
 ## Search Examples
 
