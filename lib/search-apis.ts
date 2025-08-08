@@ -18,14 +18,6 @@ export interface Company {
   comment?: string
   enriched: boolean
   source: "firecrawl" | "google" | "exa" | "alternative"
-
-  linkedInUrl?: string
-  technologyStack?: string[]
-  marketCap?: string
-  growthRate?: string
-  ceoName?: string
-  businessModel?: string
-  socialMedia?: Record<string, string>
 }
 
 export interface SearchSuggestion {
@@ -35,26 +27,26 @@ export interface SearchSuggestion {
 }
 
 // Alternative search API integration (primary method)
-// export async function searchWithAlternative(query: string): Promise<Company[]> {
-//   try {
-//     const response = await fetch("/api/search/alternative", {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({ query }),
-//     })
+export async function searchWithAlternative(query: string): Promise<Company[]> {
+  try {
+    const response = await fetch("/api/search/alternative", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    })
 
-//     if (!response.ok) {
-//       console.error("Alternative search failed:", response.status)
-//       return []
-//     }
+    if (!response.ok) {
+      console.error("Alternative search failed:", response.status)
+      return []
+    }
 
-//     const data = await response.json()
-//     return data.companies || []
-//   } catch (error) {
-//     console.error("Alternative search error:", error)
-//     return []
-//   }
-// }
+    const data = await response.json()
+    return data.companies || []
+  } catch (error) {
+    console.error("Alternative search error:", error)
+    return []
+  }
+}
 
 // Firecrawl API integration
 export async function searchWithFirecrawl(query: string): Promise<Company[]> {
@@ -150,20 +142,21 @@ export async function searchCompanies(query: string): Promise<Company[]> {
   
   // Try alternative search first as it's most reliable
   try {
-    const exaResults = await searchWithExa(query)
-    if (exaResults && exaResults.length > 0) {
-      console.log("Alternative search returned", exaResults.length, "results")
-      return exaResults
+    const alternativeResults = await searchWithAlternative(query)
+    if (alternativeResults && alternativeResults.length > 0) {
+      console.log("Alternative search returned", alternativeResults.length, "results")
+      return alternativeResults
     }
   } catch (error) {
     console.error("Alternative search failed:", error)
   }
 
+  // If alternative search fails, try other APIs in parallel
   console.log("Trying other search APIs...")
   const [firecrawlResults, googleResults, exaResults] = await Promise.allSettled([
     searchWithFirecrawl(query),
     searchWithGoogle(query),
-    searchWithExa(query)
+    searchWithExa(query),
   ])
 
   const allCompanies: Company[] = []
