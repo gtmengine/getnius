@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import SessionProviderWrapper from '@/components/session-provider'
 
 export const metadata: Metadata = {
   title: 'Getnius',
@@ -14,9 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        <SessionProviderWrapper>{children}</SessionProviderWrapper>
-      </body>
+      <body>{children}</body>
     </html>
   )
 }
