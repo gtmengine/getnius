@@ -16,6 +16,16 @@ import {
   Search,
 } from "lucide-react"
 
+// Define a module type for better organization
+type Module = {
+  id: string;
+  name: string;
+  icon: React.ComponentType<any>;
+  component: React.ComponentType<any>;
+  props: Record<string, any>;
+  buttonType: 'normal' | 'small';
+};
+
 const MarketIntelligenceTool = React.memo(() => {
   // State declarations
   const [currentScreen, setCurrentScreen] = useState("search")
@@ -138,24 +148,37 @@ const MarketIntelligenceTool = React.memo(() => {
   )
 
   // Handle export
-  const handleExport = useCallback(() => {
-    if (!searchResults.length) return;
-    const headers = [
-      'Company', 'Source', 'Website', 'Employees', 'Funding', 'Location', 'Status'
-    ];
-    const rows = searchResults.map(company => [
-      company.name,
-      company.source,
-      company.website,
-      company.employees,
-      company.funding,
-      company.location,
-      company.relevance || 'Pending',
-    ]);
+  const handleExport = useCallback((
+    companiesToExport: Company[],
+    customColumns: { id: string; name: string }[] = []
+  ) => {
+    if (!companiesToExport.length) return;
+
+    // Create headers based on visible columns
+    const baseHeaders = ['Company', 'Description', 'Webpage'];
+    const customHeaders = customColumns.map(col => col.name);
+    const headers = [...baseHeaders, ...customHeaders];
+
+    // Create CSV content
+    const rows = companiesToExport.map(company => {
+      const baseData = [
+        company.name,
+        company.description || '',
+        company.website || ''
+      ];
+
+      // Add empty values for custom columns
+      const customData = customColumns.map(() => '');
+
+      return [...baseData, ...customData];
+    });
+
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.map(field => `"${(field ?? '').toString().replace(/"/g, '""')}"`).join(','))
     ].join('\n');
+
+    // Download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -165,7 +188,101 @@ const MarketIntelligenceTool = React.memo(() => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [searchResults]);
+  }, []);
+
+  // Define all modules/screens
+  const modules: Module[] = useMemo(() => [
+    {
+      id: "search",
+      name: "Search",
+      icon: Search,
+      component: SearchScreen,
+      props: {
+        searchQuery,
+        setSearchQuery,
+        isSearching,
+        searchResults,
+        companies,
+        relevantCompanies,
+        nonRelevantCompanies,
+        pendingCompanies,
+        precision,
+        expandedResults,
+        showExamples,
+        selectedCategory,
+        customCategory,
+        showCustomInput,
+        showNonRelevantList,
+        handleSearch,
+        handleSearchChange,
+        handleSuggestionSelect,
+        handleExampleSelect,
+        handleRelevanceFeedback,
+        setCurrentScreen,
+        setSelectedCategory,
+        setCustomCategory,
+        setShowCustomInput,
+        setShowNonRelevantList
+      },
+      buttonType: 'normal'
+    },
+    {
+      id: "enrich",
+      name: "Enrich",
+      icon: Database,
+      component: EnrichmentScreen,
+      props: {
+        relevantCompanies,
+        setCurrentScreen,
+        handleExport
+      },
+      buttonType: 'normal'
+    },
+    {
+      id: "action",
+      name: "Action",
+      icon: Zap,
+      component: ActionScreen,
+      props: {
+        setCurrentScreen,
+        handleExport,
+        enrichedCompanies
+      },
+      buttonType: 'normal'
+    },
+    {
+      id: "settings",
+      name: "Settings",
+      icon: Settings,
+      component: SettingsScreen,
+      props: {
+        setCurrentScreen
+      },
+      buttonType: 'normal'
+    }
+  ], [
+    searchQuery,
+    isSearching,
+    searchResults,
+    companies,
+    relevantCompanies,
+    nonRelevantCompanies,
+    pendingCompanies,
+    precision,
+    expandedResults,
+    showExamples,
+    selectedCategory,
+    customCategory,
+    showCustomInput,
+    showNonRelevantList,
+    handleSearch,
+    handleSearchChange,
+    handleSuggestionSelect,
+    handleExampleSelect,
+    handleRelevanceFeedback,
+    handleExport,
+    enrichedCompanies
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -183,30 +300,26 @@ const MarketIntelligenceTool = React.memo(() => {
               </div>
             </div>
             <div className="flex">
-              {[
-                { id: "search", name: "Search", icon: Search },
-                { id: "enrich", name: "Enrich", icon: Database },
-                { id: "action", name: "Action", icon: Zap },
-                { id: "settings", name: "Settings", icon: Settings },
-              ].map((item, index) => {
-                const Icon = item.icon
-                const isActive = currentScreen === item.id
-                const isCompleted = index === 0 ? relevantCompanies.length > 0 :
-                  index === 1 ? relevantCompanies.length > 0 : false
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setCurrentScreen(item.id)}
-                    className={`flex items-center gap-3 px-6 py-2 transition-colors relative rounded-md ${isActive
-                      ? "bg-blue-600 text-white"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                      }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="font-medium">{item.name}</span>
-                  </button>
-                )
-              })}
+              {modules.map((module) => (
+                <button
+                  key={module.id}
+                  onClick={() => setCurrentScreen(module.id)}
+                  className={`flex items-center gap-3 transition-colors relative rounded-md ${
+                    module.buttonType === 'normal' 
+                      ? `px-6 py-2 ${currentScreen === module.id 
+                          ? "bg-blue-600 text-white" 
+                          : "border-transparent text-gray-500 hover:text-gray-700"}`
+                      : `p-2 ${currentScreen === module.id 
+                          ? "text-blue-600" 
+                          : "text-gray-500 hover:text-gray-700"}`
+                  }`}
+                >
+                  <module.icon className="w-4 h-4" />
+                  {module.buttonType === 'normal' && (
+                    <span className="font-medium">{module.name}</span>
+                  )}
+                </button>
+              ))}
             </div>
             <div className="flex items-center gap-4">
               {/* Telegram Group Link */}
@@ -229,12 +342,6 @@ const MarketIntelligenceTool = React.memo(() => {
               >
                 <Bell className="w-5 h-5 text-gray-600" />
               </button>
-              <button
-                onClick={() => setCurrentScreen("settings")}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <Settings className="w-5 h-5 text-gray-600" />
-              </button>
             </div>
           </div>
         </div>
@@ -242,55 +349,9 @@ const MarketIntelligenceTool = React.memo(() => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-8 py-8">
-        {currentScreen === "search" && (
-          <SearchScreen
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            isSearching={isSearching}
-            searchResults={searchResults}
-            companies={companies}
-            relevantCompanies={relevantCompanies}
-            nonRelevantCompanies={nonRelevantCompanies}
-            pendingCompanies={pendingCompanies}
-            precision={precision}
-            expandedResults={expandedResults}
-            showExamples={showExamples}
-            selectedCategory={selectedCategory}
-            customCategory={customCategory}
-            showCustomInput={showCustomInput}
-            showNonRelevantList={showNonRelevantList}
-            handleSearch={handleSearch}
-            handleSearchChange={handleSearchChange}
-            handleSuggestionSelect={handleSuggestionSelect}
-            handleExampleSelect={handleExampleSelect}
-            handleRelevanceFeedback={handleRelevanceFeedback}
-            setCurrentScreen={setCurrentScreen}
-            setSelectedCategory={setSelectedCategory}
-            setCustomCategory={setCustomCategory}
-            setShowCustomInput={setShowCustomInput}
-            setShowNonRelevantList={setShowNonRelevantList}
-          />
-        )}
-
-        {currentScreen === "enrich" && (
-          <EnrichmentScreen
-            relevantCompanies={relevantCompanies}
-            setCurrentScreen={setCurrentScreen}
-            handleExport={handleExport}
-          />
-        )}
-
-        {currentScreen === "action" && (
-          <ActionScreen
-            setCurrentScreen={setCurrentScreen}
-            handleExport={handleExport}
-            enrichedCompanies={enrichedCompanies}
-          />
-        )}
-
-        {currentScreen === "settings" && (
-          <SettingsScreen setCurrentScreen={setCurrentScreen} />
-        )}
+        {modules.map((module) => currentScreen === module.id && (
+          <module.component key={module.id} {...module.props} />
+        ))}
       </div>
     </div>
   )

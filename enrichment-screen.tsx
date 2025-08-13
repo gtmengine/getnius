@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback } from "react";
 import {
-    Check,
     Download,
     Building,
     ExternalLink,
@@ -16,7 +15,7 @@ import { type Company } from "./lib/search-apis";
 interface EnrichmentScreenProps {
     relevantCompanies: Company[];
     setCurrentScreen: (screen: string) => void;
-    handleExport: () => void;
+    handleExport: (companies: Company[], customColumns: {id: string; name: string}[]) => void;
 }
 
 const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
@@ -97,7 +96,7 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                         {isEnriching ? 'Enriching...' : `Enrich Selected`}
                     </button>
                     <button 
-                        onClick={handleExport} 
+                        onClick={() => handleExport(relevantCompanies, customColumns)} 
                         className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
                     >
                         <Download className="w-4 h-4" />
@@ -114,7 +113,7 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                         onClick={handleAddColumn}
                         className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-4 h-6" />
                         Add Column
                     </button>
                 </div>
