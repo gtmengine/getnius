@@ -26,6 +26,114 @@ type Module = {
   buttonType: 'normal' | 'small';
 };
 
+const HeaderLogo = () => (
+  <div className="flex items-center gap-3">
+    <div className="p-2 bg-blue-600 rounded-lg">
+      <Target className="w-6 h-6 text-white" />
+    </div>
+    <div>
+      <h1 className="text-xl font-bold text-gray-900">Getnius</h1>
+      <p className="text-sm text-gray-600">Your ultimate Market-Intelligence tool</p>
+    </div>
+  </div>
+);
+
+interface NavigationButtonProps {
+  module: Module;
+  currentScreen: string;
+  onClick: () => void;
+}
+
+const NavigationButton = ({ module, currentScreen, onClick }: NavigationButtonProps) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-3 transition-colors relative rounded-md ${
+      module.buttonType === 'normal' 
+        ? `px-6 py-2 ${currentScreen === module.id 
+            ? "bg-blue-600 text-white" 
+            : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`
+        : `p-2 ${currentScreen === module.id 
+            ? "text-blue-600" 
+            : "text-gray-500 hover:text-gray-700"}`
+    }`}
+  >
+    <module.icon className="w-4 h-4" />
+    {module.buttonType === 'normal' && (
+      <span className="font-medium">{module.name}</span>
+    )}
+  </button>
+);
+
+const ExternalLinks = () => (
+  <div className="flex items-center gap-2">
+    <a
+      href="https://t.me/+4FRzSKQG-RtkODAy"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium"
+    >
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-.14.04-.23.07-.48.16-2.9 1.84-2.9 1.84s-.41.26-.82.25c-.27-.01-.8-.15-1.19-.27-.48-.15-.87-.23-.83-.48.02-.13.18-.26.48-.4 0 0 4.4-1.8 5.94-2.43.65-.26 2.84-1.18 2.84-1.18s1.02-.4 1.02.26z" />
+      </svg>
+      <span>Join the group</span>
+    </a>
+    <button
+      className="p-2 hover:bg-gray-100 rounded-lg"
+      title="Subscribe to the newsletter"
+      onClick={() => window.open('https://gtmbe.substack.com/', '_blank')}
+    >
+      <Bell className="w-5 h-5 text-gray-600" />
+    </button>
+  </div>
+);
+
+const Header = ({ 
+  modules, 
+  currentScreen, 
+  setCurrentScreen 
+}: { 
+  modules: Module[]; 
+  currentScreen: string; 
+  setCurrentScreen: (id: string) => void; 
+}) => (
+  <div className="bg-white border-b">
+    <div className="max-w-7xl mx-auto px-8 py-2">
+      <div className="flex items-center justify-between">
+        <HeaderLogo />
+        
+        <div className="flex">
+          {modules
+            .filter(module => module.buttonType === 'normal')
+            .map((module) => (
+              <NavigationButton
+                key={module.id}
+                module={module}
+                currentScreen={currentScreen}
+                onClick={() => setCurrentScreen(module.id)}
+              />
+            ))}
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex">
+            {modules
+              .filter(module => module.buttonType === 'small')
+              .map((module) => (
+                <NavigationButton
+                  key={module.id}
+                  module={module}
+                  currentScreen={currentScreen}
+                  onClick={() => setCurrentScreen(module.id)}
+                />
+              ))}
+          </div>
+          <ExternalLinks />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const MarketIntelligenceTool = React.memo(() => {
   // State declarations
   const [currentScreen, setCurrentScreen] = useState("search")
@@ -284,91 +392,14 @@ const MarketIntelligenceTool = React.memo(() => {
     enrichedCompanies
   ]);
 
-  return (
+    return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-8 py-2">
-          <div className="flex items-center justify-between">
-            {/* Left side: Logo and title */}
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <Target className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Getnius</h1>
-                <p className="text-sm text-gray-600">Your ultimate Market-Intelligence tool</p>
-              </div>
-            </div>
-
-            {/* Center: Normal navigation buttons */}
-            <div className="flex">
-              {modules
-                .filter(module => module.buttonType === 'normal')
-                .map((module) => (
-                  <button
-                    key={module.id}
-                    onClick={() => setCurrentScreen(module.id)}
-                    className={`flex items-center gap-3 transition-colors relative rounded-md px-6 py-2 ${currentScreen === module.id
-                        ? "bg-blue-600 text-white"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                      }`}
-                  >
-                    <module.icon className="w-4 h-4" />
-                    <span className="font-medium">{module.name}</span>
-                  </button>
-                ))}
-            </div>
-
-            {/* Right side: Small buttons and external links */}
-            <div className="flex items-center gap-4">
-              {/* Small navigation buttons */}
-              <div className="flex">
-                {modules
-                  .filter(module => module.buttonType === 'small')
-                  .map((module) => (
-                    <button
-                      key={module.id}
-                      onClick={() => setCurrentScreen(module.id)}
-                      className={`p-2 rounded-lg ${currentScreen === module.id
-                          ? "text-blue-600 bg-blue-50"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                        }`}
-                      title={module.name}
-                    >
-                      <module.icon className="w-5 h-5" />
-                    </button>
-                  ))}
-              </div>
-
-              {/* External links */}
-              <div className="flex items-center gap-2">
-                {/* Telegram Group Link */}
-                <a
-                  href="https://t.me/+4FRzSKQG-RtkODAy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium"
-                >
-                  {/* Telegram Paper Plane Icon */}
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-.14.04-.23.07-.48.16-2.9 1.84-2.9 1.84s-.41.26-.82.25c-.27-.01-.8-.15-1.19-.27-.48-.15-.87-.23-.83-.48.02-.13.18-.26.48-.4 0 0 4.4-1.8 5.94-2.43.65-.26 2.84-1.18 2.84-1.18s1.02-.4 1.02.26z" />
-                  </svg>
-                  <span>Join the group</span>
-                </a>
-                <button
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                  title="Subscribe to the newsletter"
-                  onClick={() => window.open('https://gtmbe.substack.com/', '_blank')}
-                >
-                  <Bell className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      <Header 
+        modules={modules} 
+        currentScreen={currentScreen} 
+        setCurrentScreen={setCurrentScreen} 
+      />
+      
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-8 py-8">
         {modules.map((module) => currentScreen === module.id && (
