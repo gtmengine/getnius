@@ -53,11 +53,11 @@ const NavigationButton = ({ module, currentScreen, onClick }: NavigationButtonPr
             ? "bg-blue-600 text-white" 
             : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`
         : `p-2 ${currentScreen === module.id 
-            ? "text-blue-600" 
-            : "text-gray-500 hover:text-gray-700"}`
+            ? "text-blue-600 bg-blue-50" 
+            : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`
     }`}
   >
-    <module.icon className="w-4 h-4" />
+    <module.icon className="w-5 h-5" />
     {module.buttonType === 'normal' && (
       <span className="font-medium">{module.name}</span>
     )}
@@ -72,7 +72,7 @@ const ExternalLinks = () => (
       rel="noopener noreferrer"
       className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium"
     >
-      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-.14.04-.23.07-.48.16-2.9 1.84-2.9 1.84s-.41.26-.82.25c-.27-.01-.8-.15-1.19-.27-.48-.15-.87-.23-.83-.48.02-.13.18-.26.48-.4 0 0 4.4-1.8 5.94-2.43.65-.26 2.84-1.18 2.84-1.18s1.02-.4 1.02.26z" />
       </svg>
       <span>Join the group</span>
