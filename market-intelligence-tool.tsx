@@ -254,7 +254,7 @@ const MarketIntelligenceTool = React.memo(() => {
   // Handle export
   const handleExport = useCallback((
     companiesToExport: Company[],
-    customColumns: { id: string; name: string }[] = []
+    customColumns: { id: string; name: string; prompt: string }[] = [] // Updated type to include prompt
   ) => {
     if (!companiesToExport.length) return;
 
@@ -262,6 +262,12 @@ const MarketIntelligenceTool = React.memo(() => {
     const baseHeaders = ['Company', 'Description', 'Webpage'];
     const customHeaders = customColumns.map(col => col.name);
     const headers = [...baseHeaders, ...customHeaders];
+
+    // Create prompt row (second row)
+    const promptRow = [
+      ...baseHeaders.map(() => ''), // Empty for base columns
+      ...customColumns.map(col => col.prompt) // Prompts for custom columns
+    ];
 
     // Create CSV content
     const rows = companiesToExport.map(company => {
@@ -279,6 +285,7 @@ const MarketIntelligenceTool = React.memo(() => {
 
     const csvContent = [
       headers.join(','),
+      promptRow.map(field => `"${(field ?? '').toString().replace(/"/g, '""')}"`).join(','),
       ...rows.map(row => row.map(field => `"${(field ?? '').toString().replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
