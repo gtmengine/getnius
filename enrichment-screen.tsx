@@ -1,11 +1,10 @@
 "use client"
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
     Download,
     Building,
     ExternalLink,
-    Sparkles,
     ArrowRight,
     Plus,
     X
@@ -27,7 +26,11 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     const [customColumns, setCustomColumns] = useState<{id: string; name: string}[]>([
         { id: crypto.randomUUID(), name: 'Industry' }
     ]);
-    const [isEnriching, setIsEnriching] = useState(false);
+    
+    // Ref to track the last added column ID
+    const [lastAddedColumnId, setLastAddedColumnId] = useState<string | null>(null);
+    // Ref to store input element references
+    const inputRefs = useRef<{[key: string]: HTMLInputElement | null}>({});
 
     // Handle column name changes
     const handleColumnNameChange = (columnId: string, newName: string) => {
@@ -38,16 +41,28 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
 
     // Add new custom column
     const handleAddColumn = () => {
+        const newId = crypto.randomUUID();
         setCustomColumns(prev => [
             ...prev,
-            { id: crypto.randomUUID(), name: 'New Column' }
+            { id: newId, name: 'New Column' }
         ]);
+        setLastAddedColumnId(newId);
     };
 
     // Remove custom column
     const handleRemoveColumn = (columnId: string) => {
         setCustomColumns(prev => prev.filter(col => col.id !== columnId));
     };
+
+    // Focus the input when a new column is added
+    useEffect(() => {
+        if (lastAddedColumnId && inputRefs.current[lastAddedColumnId]) {
+            inputRefs.current[lastAddedColumnId]?.focus();
+            // Select all text for easy editing
+            inputRefs.current[lastAddedColumnId]?.select();
+            setLastAddedColumnId(null);
+        }
+    }, [lastAddedColumnId, customColumns]);
 
     // Handle company selection
     const handleSelectCompany = (companyId: string) => {
@@ -69,14 +84,6 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
         }
     };
 
-    // Handle enrichment
-    const handleEnrichSelected = useCallback(() => {
-        setIsEnriching(true);
-        setTimeout(() => {
-            setIsEnriching(false);
-        }, 3000);
-    }, []);
-
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -87,14 +94,6 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleEnrichSelected}
-                        disabled={selectedCompanies.size === 0 || isEnriching}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center gap-2"
-                    >
-                        <Sparkles className="w-4 h-4" />
-                        {isEnriching ? 'Enriching...' : `Enrich Selected`}
-                    </button>
                     <button 
                         onClick={() => handleExport(relevantCompanies, customColumns)} 
                         className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
@@ -108,13 +107,12 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
             {/* Custom Columns Header */}
             <div className="bg-white rounded-lg p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-gray-900">Custom Columns</h3>
                     <button
                         onClick={handleAddColumn}
-                        className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
                     >
-                        <Plus className="w-4 h-6" />
-                        Add Column
+                        <Plus className="w-4 h-4" />
+                        Add Custom Column
                     </button>
                 </div>
                 
@@ -122,6 +120,7 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                     {customColumns.map((column) => (
                         <div key={column.id} className="flex items-center bg-gray-100 rounded-lg px-3 py-2">
                             <input
+                                ref={(el) => { inputRefs.current[column.id] = el; }}
                                 type="text"
                                 value={column.name}
                                 onChange={(e) => handleColumnNameChange(column.id, e.target.value)}

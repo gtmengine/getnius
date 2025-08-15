@@ -5,7 +5,7 @@ import { useState, useMemo, useCallback } from "react"
 import { searchCompanies, type Company } from "./lib/search-apis"
 import SearchScreen from "./search-screen"
 import EnrichmentScreen from "./enrichment-screen"
-import ActionScreen from "./action-screen"
+// import ActionScreen from "./action-screen"
 import SettingsScreen from "./settings-screen"
 import {
   Target,
@@ -165,10 +165,6 @@ const MarketIntelligenceTool = React.memo(() => {
     companies.filter(company => !company.relevance),
     [companies]
   )
-
-  const handleEnrichedData = useCallback((companies: Company[]) => {
-    setEnrichedCompanies(companies);
-  }, []);
 
   // Handle search execution
   const handleSearch = useCallback(async (queryOverride?: string) => {
@@ -343,18 +339,6 @@ const MarketIntelligenceTool = React.memo(() => {
         relevantCompanies,
         setCurrentScreen,
         handleExport
-      },
-      buttonType: 'normal'
-    },
-    {
-      id: "action",
-      name: "Action",
-      icon: Zap,
-      component: ActionScreen,
-      props: {
-        setCurrentScreen,
-        handleExport,
-        enrichedCompanies
       },
       buttonType: 'normal'
     },
