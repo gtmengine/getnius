@@ -7,7 +7,8 @@ import {
     ExternalLink,
     ArrowRight,
     Plus,
-    X
+    X,
+    Sparkles
 } from "lucide-react";
 import { type Company } from "./lib/search-apis";
 
@@ -34,6 +35,66 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
             prompt: 'Extract the primary industry from company description' // Default prompt
         }
     ]);
+
+    // Add state for suggestions and loading
+    const [suggestions, setSuggestions] = useState<{ name: string; prompt: string }[]>([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+    // Fetch suggestions when relevantCompanies change
+    useEffect(() => {
+        const fetchSuggestions = async () => {
+            if (relevantCompanies.length === 0) return;
+
+            setLoadingSuggestions(true);
+            try {
+                const response = await fetch('/api/generate-suggestions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ companies: relevantCompanies })
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch suggestions');
+
+                const data = await response.json();
+                setSuggestions(data);
+            } catch (error) {
+                console.error('Error fetching suggestions:', error);
+                // Fallback to default suggestions
+                setSuggestions([
+                    { name: "Funding Amount", prompt: "Extract the total funding amount raised" },
+                    { name: "Headquarters", prompt: "Extract the company headquarters location" },
+                    { name: "Founding Year", prompt: "Extract the year the company was founded" }
+                ]);
+            } finally {
+                setLoadingSuggestions(false);
+            }
+        };
+
+        // Only fetch if we haven't already
+        if (suggestions.length === 0) {
+            fetchSuggestions();
+        }
+    }, [relevantCompanies]);
+
+    // NEW: Add all suggestions as columns
+    const addAllSuggestions = useCallback(() => {
+        setCustomColumns(prev => {
+            const newColumns = suggestions
+                .filter(suggestion =>
+                    !prev.some(col => col.name === suggestion.name)
+                )
+                .map(suggestion => ({
+                    id: crypto.randomUUID(),
+                    name: suggestion.name,
+                    prompt: suggestion.prompt
+                }));
+
+            return [...prev, ...newColumns];
+        });
+
+        // Clear suggestions after adding
+        setSuggestions([]);
+    }, [suggestions]);
     
     // Ref to track the last added column ID
     const [lastAddedColumnId, setLastAddedColumnId] = useState<string | null>(null);
@@ -193,7 +254,72 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                         Add Custom Column
                     </button>
                 </div>
+
+            {/* NEW: Suggestions Section */}
+            {suggestions.length > 0 && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-blue-600" />
+                            <h3 className="font-medium text-blue-800">AI Suggestions</h3>
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                New
+                            </span>
+                        </div>
+                        <button
+                            onClick={addAllSuggestions}
+                            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add All
+                        </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {suggestions.map((suggestion, index) => (
+                            <div 
+                                key={index} 
+                                className="bg-white p-3 rounded-lg border border-blue-200"
+                            >
+                                <div className="font-medium text-blue-700 mb-1">
+                                    {suggestion.name}
+                                </div>
+                                <p className="text-sm text-gray-600 truncate">
+                                    {suggestion.prompt}
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        setCustomColumns(prev => [
+                                            ...prev,
+                                            {
+                                                id: crypto.randomUUID(),
+                                                name: suggestion.name,
+                                                prompt: suggestion.prompt
+                                            }
+                                        ]);
+                                        setSuggestions(prev => 
+                                            prev.filter(s => s.name !== suggestion.name))
+                                    }}
+                                    className="mt-2 text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                                >
+                                    <Plus className="w-3 h-3" />
+                                    Add
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Loading state */}
+            {loadingSuggestions && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 flex items-center gap-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                    <span className="text-blue-700">Generating AI suggestions...</span>
+                </div>
+            )}
                 
+                {/* Custom columns on a grid*/}
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {customColumns.map((column) => (
                         <div key={column.id} className="border rounded-lg p-3 bg-gray-50">
