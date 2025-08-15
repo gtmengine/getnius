@@ -373,11 +373,8 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                                     onFocus={handleFocus}
                                     onBlur={handleBlur}
                                     className="bg-white border rounded px-2 py-1 w-full text-sm min-h-[60px] overflow-hidden resize-none"
-                                    placeholder="Describe what data to extract"
+                                    placeholder="Describe what data to extract: Extract funding amount from description"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Example: "Extract funding amount from description"
-                                </p>
                             </div>
                         </div>
                     ))}
@@ -390,14 +387,14 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <input
                                         type="checkbox"
                                         checked={selectedCompanies.size === relevantCompanies.length}
                                         onChange={handleSelectAll}
                                         className="rounded border-gray-300"
                                     />
-                                </th>
+                                </th> */}
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-64">
                                     Company
                                 </th>
@@ -420,14 +417,14 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                         <tbody className="divide-y divide-gray-200">
                             {relevantCompanies.map((company) => (
                                 <tr key={company.id} className="hover:bg-gray-50">
-                                    <td className="px-4 py-4">
+                                    {/* <td className="px-4 py-4">
                                         <input
                                             type="checkbox"
                                             checked={selectedCompanies.has(company.id)}
                                             onChange={() => handleSelectCompany(company.id)}
                                             className="rounded border-gray-300"
                                         />
-                                    </td>
+                                    </td> */}
                                     <td className="px-4 py-4">
                                         <div className="flex items-center gap-3">
                                             {company.logo ? (
@@ -500,7 +497,7 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                     onClick={() => setCurrentScreen("action")}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
                 >
-                    Take Action
+                    Send for Enrichment
                     <ArrowRight className="w-4 h-4" />
                 </button>
             </div>
