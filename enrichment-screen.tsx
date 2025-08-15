@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
     Download,
     Building,
@@ -23,8 +23,16 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
     handleExport
 }) => {
     const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
-    const [customColumns, setCustomColumns] = useState<{id: string; name: string}[]>([
-        { id: crypto.randomUUID(), name: 'Industry' }
+    const [customColumns, setCustomColumns] = useState<{
+        id: string;
+        name: string;
+        prompt: string; // NEW: prompt field
+    }[]>([
+        {
+            id: crypto.randomUUID(),
+            name: 'Industry',
+            prompt: 'Extract the primary industry from company description' // Default prompt
+        }
     ]);
     
     // Ref to track the last added column ID
@@ -39,12 +47,82 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
         );
     };
 
+    
+    // Auto-resize function for textareas
+    const autoGrow = useCallback((el: HTMLTextAreaElement) => {
+        // Always reset to auto to get correct scrollHeight
+        el.style.height = 'auto';
+        
+        if (document.activeElement === el) {
+            // When focused, expand to fit content
+            el.style.height = el.scrollHeight + 'px';
+        } else {
+            // When blurred, compress to min-height
+            el.style.height = '60px';
+        }
+    }, []);
+
+    // Handle blur event with transition
+    const handleBlur = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
+        const el = e.currentTarget;
+        
+        // Add transition class
+        el.classList.add('transition-[height]', 'duration-200', 'ease-out');
+        
+        // Compress to min-height
+        el.style.height = '60px';
+        
+        // Remove transition class after animation completes
+        setTimeout(() => {
+            el.classList.remove('transition-[height]', 'duration-200', 'ease-out');
+        }, 200);
+    }, []);
+
+    // Handle focus event
+    const handleFocus = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
+        const el = e.currentTarget;
+        // Remove transition for instant expansion
+        el.classList.remove('transition-[height]', 'duration-200', 'ease-out');
+        // Expand to fit content
+        autoGrow(el);
+    }, [autoGrow]);
+
+    // Ref for textareas
+    const textareaRefs = useRef<{[key: string]: HTMLTextAreaElement | null}>({});
+
+    // Setup auto-resize on mount and when customColumns change
+    useEffect(() => {
+        Object.values(textareaRefs.current).forEach(textarea => {
+            if (textarea) {
+                autoGrow(textarea);
+            }
+        });
+    }, [customColumns, autoGrow]);
+
+    // Handle prompt changes with auto-resize
+    const handleColumnPromptChange = (columnId: string, newPrompt: string) => {
+        setCustomColumns(prev => 
+            prev.map(col => col.id === columnId ? { ...col, prompt: newPrompt } : col)
+        );
+        
+        // Auto-resize immediately after change
+        const textarea = textareaRefs.current[columnId];
+        if (textarea) {
+            autoGrow(textarea);
+        }
+    };
+
     // Add new custom column
+    // Update handleAddColumn to include prompt
     const handleAddColumn = () => {
         const newId = crypto.randomUUID();
         setCustomColumns(prev => [
             ...prev,
-            { id: newId, name: 'New Column' }
+            { 
+                id: newId, 
+                name: 'New Column',
+                prompt: '' // Empty prompt by default
+            }
         ]);
         setLastAddedColumnId(newId);
     };
@@ -116,23 +194,65 @@ const EnrichmentScreen: React.FC<EnrichmentScreenProps> = ({
                     </button>
                 </div>
                 
-                <div className="flex flex-wrap gap-2">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {customColumns.map((column) => (
-                        <div key={column.id} className="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <input
-                                ref={(el) => { inputRefs.current[column.id] = el; }}
-                                type="text"
-                                value={column.name}
-                                onChange={(e) => handleColumnNameChange(column.id, e.target.value)}
-                                className="bg-transparent outline-none w-32"
-                                placeholder="Column name"
-                            />
-                            <button
-                                onClick={() => handleRemoveColumn(column.id)}
-                                className="ml-2 text-gray-400 hover:text-red-600"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
+                        <div key={column.id} className="border rounded-lg p-3 bg-gray-50">
+                            <div className="flex justify-between items-start mb-2">
+                                <div className="flex-1">
+                                    <label className="text-xs font-medium text-gray-500 mb-1 block">
+                                        Column Name
+                                    </label>
+                                    <div className="flex items-center">
+                                        <input
+                                            ref={(el) => { 
+                                                if (column.id === lastAddedColumnId) {
+                                                    inputRefs.current[column.id] = el;
+                                                }
+                                            }}
+                                            type="text"
+                                            value={column.name}
+                                            onChange={(e) => handleColumnNameChange(column.id, e.target.value)}
+                                            className="bg-white border rounded px-2 py-1 w-full text-sm"
+                                            placeholder="Column name"
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleRemoveColumn(column.id)}
+                                    className="ml-2 mt-5 text-gray-400 hover:text-red-600"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                            
+                            {/* Auto-resizing textarea */}
+                            <div>
+                                <label className="text-xs font-medium text-gray-500 mb-1 block">
+                                    Neural Network Prompt
+                                </label>
+                                <textarea
+                                    ref={(el) => {
+                                        textareaRefs.current[column.id] = el;
+                                        if (el) {
+                                            autoGrow(el);
+                                        }
+                                    }}
+                                    value={column.prompt}
+                                    onChange={(e) => handleColumnPromptChange(column.id, e.target.value)}
+                                    onInput={(e) => {
+                                        if (e.currentTarget) {
+                                            autoGrow(e.currentTarget);
+                                        }
+                                    }}
+                                    onFocus={handleFocus}
+                                    onBlur={handleBlur}
+                                    className="bg-white border rounded px-2 py-1 w-full text-sm min-h-[60px] overflow-hidden resize-none"
+                                    placeholder="Describe what data to extract"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Example: "Extract funding amount from description"
+                                </p>
+                            </div>
                         </div>
                     ))}
                 </div>
