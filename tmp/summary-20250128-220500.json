@@ -1,4 +1,0 @@
-{
-  "summary": "Added newsletter subscription functionality to the bell icon in the header. The bell now shows a 'Subscribe to the newsletter' tooltip on hover and redirects to 'https://gtmbe.substack.com/' when clicked, opening in a new tab. This provides easy access to newsletter signup while maintaining the existing visual design and user experience.",
-  "current_status": "All user interface enhancements are complete: dynamic column suggestions for enrichment, comprehensive search functionality with CSV parsing and link processing, Telegram group button with authentic paper plane icon, and newsletter subscription via the bell icon. The application now has full community engagement features including both Telegram group access and newsletter subscription capabilities."
-}

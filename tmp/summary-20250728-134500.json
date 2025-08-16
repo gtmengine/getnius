@@ -1,4 +1,0 @@
-{
-  "summary": "User identified a redundant section in the Enrichment Columns area that shows an old pill-button interface with labels like 'COMPANY', 'SOURCE', 'COMPANY NAME', 'INDUSTRY', 'REVENUE', 'EMPLOYEE COUNT', 'WEBSITE', 'LINKEDIN', 'TECHNOLOGY STACK', 'DESCRIPTION', 'CEO NAME' with a right-pointing scroll indicator. This old interface appears to be rendered alongside the new Google Sheets-style column selector and needs to be removed. The current enrichment-screen.tsx file correctly uses the new ColumnSelector component, but there may be some old code that wasn't properly removed during the previous refactoring.",
-  "current_status": "Need to identify and remove the redundant old pill-button interface that's still being rendered in the Enrichment Columns section. The new Google Sheets-style ColumnSelector is working correctly, but there's an old interface that's still appearing and needs to be completely removed."
-} 

@@ -1,4 +1,0 @@
-{
-  "summary": "Fixed tabindex values as requested by user. Changed the custom category input and 'Other' button from tabIndex={8} to tabIndex={1} to match the search input priority. Now both the main search input and the custom category elements have tabIndex={1} for consistent keyboard navigation priority.",
-  "current_status": "Tabindex values are now consistent with user requirements. The search input, custom category input, and 'Other' button all have tabIndex={1} for equal keyboard navigation priority."
-} 

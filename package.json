@@ -9,9 +9,6 @@
     "start": "next start"
   },
   "dependencies": {
-    "@auth/core": "^0.34.2",
-    "@dotenvx/dotenvx": "^1.48.4",
-    "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
@@ -43,13 +40,11 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
-    "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "next-themes": "^0.4.6",
-    "next-auth": "^4.24.11",
     "react": "^19.1.1",
     "react-day-picker": "8.10.1",
     "react-dom": "^19.1.1",
@@ -59,14 +54,14 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "vaul": "^0.9.9",
-    "zod": "^3.25.76"
+    "vaul": "^0.9.9"
   },
   "devDependencies": {
     "@types/node": "^22.17.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
-    "mimic": "^2.0.9",
+    "eslint": "^9.33.0",
+    "eslint-config-next": "^15.4.6",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.9.2"
