@@ -1,4 +1,0 @@
-{
-  "summary": "Fixed column overlap issue where the Source column header was appearing behind/overlapping with the Company column in empty table state. Updated column widths and positioning in both header (column-selector.tsx) and body (enrichment-screen.tsx) to ensure consistent alignment. Checkbox column increased to w-16, Company column repositioned to left-16 with min-w-64, maintaining proper sticky positioning.",
-  "current_status": "Table column alignment is now fixed with consistent widths and positioning between headers and body cells, preventing overlap issues in both empty and populated states."
-}

@@ -1,4 +1,0 @@
-{
-  "summary": "Added a prominent 'Join the group' button with Telegram icon to the top right corner of the application header. The button links to the provided Telegram group URL (https://t.me/+4FRzSKQG-RtkODAy) and features a blue background with hover effects, MessageCircle icon, and proper accessibility attributes. The button is positioned before the notification and settings buttons in the header for maximum visibility.",
-  "current_status": "Successfully implemented the Telegram group link button in the header. Previous work on dynamic column suggestions for the enrichment screen has been completed, with the system now generating context-aware column suggestions based on search queries and use cases. The application now features both enhanced enrichment functionality and easy access to the community Telegram group."
-}

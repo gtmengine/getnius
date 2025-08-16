@@ -147,7 +147,7 @@ const EnhancedSearchSuggestions: React.FC<EnhancedSearchSuggestionsProps> = ({
           </div>
         ) : suggestions.length === 0 ? (
           <div className="px-4 py-3 text-sm text-gray-500">
-            No suggestions available for "{query}"
+            No suggestions available for &quot;{query}&quot;
           </div>
         ) : (
           <div className="divide-y divide-gray-100">

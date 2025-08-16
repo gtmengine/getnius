@@ -1,4 +1,0 @@
-{
-  "summary": "Enhanced the EnrichmentScreen by adding custom column functionality similar to the SearchScreen's 'Other' button. Styled the column selection checkboxes as pill buttons with improved visual design. Added state management for custom column input and implemented the ability to add custom columns to the data table.",
-  "current_status": "The EnrichmentScreen now features pill-style column selection buttons and a custom column input system. Users can add custom columns that appear in the data table, with proper state management and visual feedback. The interface is more intuitive and visually appealing."
-} 
