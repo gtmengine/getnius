@@ -57,6 +57,7 @@
     "vaul": "^0.9.9"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.17.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
