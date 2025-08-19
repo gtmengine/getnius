@@ -139,35 +139,37 @@ export async function getSmartSuggestions(query: string): Promise<SearchSuggesti
 // Combined search across all APIs with improved error handling
 export async function searchCompanies(query: string): Promise<Company[]> {
   console.log("Starting search for:", query)
-  
-  // Try alternative search first as it's most reliable
-  try {
-    const alternativeResults = await searchWithAlternative(query)
-    if (alternativeResults && alternativeResults.length > 0) {
-      console.log("Alternative search returned", alternativeResults.length, "results")
-      return alternativeResults
+
+  // Only use Alternative search in development
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const alternativeResults = await searchWithAlternative(query)
+      if (alternativeResults && alternativeResults.length > 0) {
+        console.log("Alternative search returned", alternativeResults.length, "results")
+        return alternativeResults
+      }
+    } catch (error) {
+      console.error("Alternative search failed:", error)
     }
-  } catch (error) {
-    console.error("Alternative search failed:", error)
   }
 
-  // If alternative search fails, try other APIs in parallel
+  // If in production or if alternative search fails in development, try other APIs
   console.log("Trying other search APIs...")
-  const [firecrawlResults, googleResults, exaResults] = await Promise.allSettled([
-    searchWithFirecrawl(query),
-    searchWithGoogle(query),
+  const [exaResults] = await Promise.allSettled([
+    // searchWithFirecrawl(query),
+    // searchWithGoogle(query),
     searchWithExa(query),
   ])
 
   const allCompanies: Company[] = []
 
-  if (firecrawlResults.status === "fulfilled" && firecrawlResults.value.length > 0) {
-    allCompanies.push(...firecrawlResults.value)
-  }
+  // if (firecrawlResults.status === "fulfilled" && firecrawlResults.value.length > 0) {
+  //   allCompanies.push(...firecrawlResults.value)
+  // }
 
-  if (googleResults.status === "fulfilled" && googleResults.value.length > 0) {
-    allCompanies.push(...googleResults.value)
-  }
+  // if (googleResults.status === "fulfilled" && googleResults.value.length > 0) {
+  //   allCompanies.push(...googleResults.value)
+  // }
 
   if (exaResults.status === "fulfilled" && exaResults.value.length > 0) {
     allCompanies.push(...exaResults.value)

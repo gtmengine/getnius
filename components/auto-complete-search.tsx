@@ -1,3 +1,5 @@
+/* Taken from https://github.com/sauravhathi/auto-complete-search */
+
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
