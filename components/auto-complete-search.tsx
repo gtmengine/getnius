@@ -2,7 +2,7 @@
 
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Search } from "lucide-react"
 
 interface AutocompleteSuggestion {
@@ -70,7 +70,9 @@ function useDebounce(value: string, delay: number) {
 export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, placeholder, className = "", tabIndex }: AutoCompleteSearchProps) => {
   const [results, setResults] = useState<AutocompleteSuggestion[]>([])
   const [isFocused, setIsFocused] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
   const debouncedQuery = useDebounce(value, 300)
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   // Generate suggestions based on query
   const generateSuggestions = useCallback((query: string): AutocompleteSuggestion[] => {
@@ -194,6 +196,11 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
     fetchSuggestions()
   }, [debouncedQuery, generateSuggestions])
 
+  // Reset selected index when results change
+  useEffect(() => {
+    setSelectedIndex(-1)
+  }, [results])
+
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     console.log("Search input changed to:", value)
@@ -208,6 +215,7 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
     // Delay hiding results to allow for clicks
     setTimeout(() => {
       setIsFocused(false)
+      setSelectedIndex(-1)
     }, 200)
   }, [])
 
@@ -218,17 +226,41 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
   }, [onSelect])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && value.trim()) {
-      console.log("Enter pressed with value:", value)
-      onSelect({
-        id: `custom-${value}`,
-        text: value,
-        type: "completion",
-        category: "Custom",
-      })
+    if (e.key === "Enter") {
+      if (selectedIndex >= 0 && results.length > 0) {
+        // Select the highlighted suggestion
+        e.preventDefault()
+        console.log("Enter pressed with suggestion:", results[selectedIndex].text)
+        onSelect(results[selectedIndex])
+        setIsFocused(false)
+      } else if (value.trim()) {
+        console.log("Enter pressed with value:", value)
+        onSelect({
+          id: `custom-${value}`,
+          text: value,
+          type: "completion",
+          category: "Custom",
+        })
+        setIsFocused(false)
+      }
+    } else if (e.key === "ArrowDown") {
+      // Move selection down
+      e.preventDefault()
+      setSelectedIndex(prev => 
+        prev < results.length - 1 ? prev + 1 : 0
+      )
+    } else if (e.key === "ArrowUp") {
+      // Move selection up
+      e.preventDefault()
+      setSelectedIndex(prev => 
+        prev > 0 ? prev - 1 : results.length - 1
+      )
+    } else if (e.key === "Escape") {
+      // Clear selection and close results
+      setSelectedIndex(-1)
       setIsFocused(false)
     }
-  }, [value, onSelect])
+  }, [value, onSelect, results, selectedIndex])
 
   const shouldShowResults = isFocused && results.length > 0
   
@@ -260,7 +292,10 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
       </div>
 
       {shouldShowResults && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+        <div 
+          ref={resultsRef}
+          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"
+        >
           <div className="p-2 border-b bg-gray-50">
             <div className="text-xs font-medium text-gray-600 flex items-center gap-1">
               <Search className="w-3 h-3" />
@@ -268,12 +303,17 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
             </div>
           </div>
 
-          {results.map((suggestion) => (
+          {results.map((suggestion, index) => (
             <button
               key={suggestion.id}
               onClick={() => handleSuggestionClick(suggestion)}
               onMouseDown={(e) => e.preventDefault()}
-              className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 transition-colors"
+              className={`w-full px-3 py-2 text-left flex items-center gap-2 transition-colors ${
+                index === selectedIndex 
+                  ? 'bg-blue-100' 
+                  : 'hover:bg-blue-50'
+              }`}
+              onMouseEnter={() => setSelectedIndex(index)}
             >
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-900 text-sm truncate">
@@ -302,4 +342,4 @@ export const AutoCompleteSearch = React.memo(({ value, onChange, onSelect, place
   )
 })
 
-AutoCompleteSearch.displayName = "AutoCompleteSearch" 
+AutoCompleteSearch.displayName = "AutoCompleteSearch"
