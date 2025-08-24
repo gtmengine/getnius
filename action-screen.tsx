@@ -12,9 +12,13 @@ import {
     Bell,
     BarChart3,
     AlertTriangle,
+    CheckCircle,
+    Eye,
+    X,
 } from "lucide-react";
 
 import { type Company } from "./lib/search-apis"
+import AuthModal from "./components/auth-modal"
 
 interface ActionScreenProps {
     setCurrentScreen: (screen: string) => void;
@@ -28,6 +32,14 @@ const ActionScreen: React.FC<ActionScreenProps> = ({
     handleExport,
     enrichedCompanies
 }) => {
+    // State for spreadsheet preview
+    const [showSpreadsheetPreview, setShowSpreadsheetPreview] = useState(true);
+    const [spreadsheetConfirmed, setSpreadsheetConfirmed] = useState(false);
+    
+    // State for authentication modal
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    
     // State for monitoring settings
     const [activeTab, setActiveTab] = useState<'export' | 'outreach' | 'monitoring'>('export');
     const [monitoringSettings, setMonitoringSettings] = useState({
@@ -48,8 +60,112 @@ const ActionScreen: React.FC<ActionScreenProps> = ({
         }));
     };
 
+    const handleSpreadsheetConfirm = () => {
+        setSpreadsheetConfirmed(true);
+        setShowAuthModal(true);
+    };
+
+    const handleAuthSuccess = () => {
+        setIsAuthenticated(true);
+        setShowAuthModal(false);
+    };
+
+    const handleAuthClose = () => {
+        setShowAuthModal(false);
+    };
+
     return (
         <div className="space-y-6">
+            {/* Spreadsheet Preview Section */}
+            {showSpreadsheetPreview && !spreadsheetConfirmed && (
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            <Eye className="w-5 h-5" />
+                            Data Preview
+                        </h3>
+                        <button
+                            onClick={() => setShowSpreadsheetPreview(false)}
+                            className="text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                    
+                    {/* Minimized Spreadsheet */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-xs">
+                                <thead>
+                                    <tr className="border-b border-gray-200">
+                                        <th className="text-left py-2 px-3 font-medium text-gray-700">Company Name</th>
+                                        <th className="text-left py-2 px-3 font-medium text-gray-700">Industry</th>
+                                        <th className="text-left py-2 px-3 font-medium text-gray-700">Employees</th>
+                                        <th className="text-left py-2 px-3 font-medium text-gray-700">Location</th>
+                                        <th className="text-left py-2 px-3 font-medium text-gray-700">Website</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {enrichedCompanies.slice(0, 3).map((company, index) => (
+                                        <tr key={index} className="border-b border-gray-100">
+                                            <td className="py-2 px-3 text-gray-900">{company.name}</td>
+                                            <td className="py-2 px-3 text-gray-600">{company.industry}</td>
+                                            <td className="py-2 px-3 text-gray-600">{company.employees || 'N/A'}</td>
+                                            <td className="py-2 px-3 text-gray-600">{company.location || 'N/A'}</td>
+                                            <td className="py-2 px-3 text-blue-600 truncate max-w-32">{company.website}</td>
+                                        </tr>
+                                    ))}
+                                    {enrichedCompanies.length > 3 && (
+                                        <tr>
+                                            <td colSpan={5} className="py-2 px-3 text-gray-500 text-center">
+                                                ... and {enrichedCompanies.length - 3} more companies
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    {/* Disclaimer */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <h4 className="text-sm font-medium text-blue-900 mb-1">Please Confirm Your Data</h4>
+                                <p className="text-sm text-blue-700">
+                                    Review the preview above to ensure the data looks correct before proceeding. 
+                                    This data will be used for your export and outreach campaigns.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                        <button
+                            onClick={handleSpreadsheetConfirm}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                        >
+                            <CheckCircle className="w-4 h-4" />
+                            Confirm & Continue
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Authentication Success Message */}
+            {isAuthenticated && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                    <div className="flex items-center gap-3">
+                        <CheckCircle className="w-6 h-6 text-green-600" />
+                        <div>
+                            <h3 className="text-lg font-semibold text-green-900">Welcome! You're signed in</h3>
+                            <p className="text-green-700">You now have full access to all export and outreach features.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900">Take Action on Your List</h2>
@@ -115,6 +231,12 @@ const ActionScreen: React.FC<ActionScreenProps> = ({
                                 description: "Instant download",
                                 icon: Download,
                                 action: handleExport
+                            },
+                            {
+                                name: "Edit in Spreadsheet",
+                                description: "Interactive editing",
+                                icon: Database,
+                                action: () => setCurrentScreen("spreadsheet")
                             },
                         ].map((option) => {
                             const Icon = option.icon
@@ -390,6 +512,13 @@ const ActionScreen: React.FC<ActionScreenProps> = ({
                     Back to Enrichment
                 </button>
             </div>
+
+            {/* Authentication Modal */}
+            <AuthModal
+                isOpen={showAuthModal}
+                onClose={handleAuthClose}
+                onSuccess={handleAuthSuccess}
+            />
         </div>
     )
 }

@@ -7,6 +7,7 @@ import SearchScreen from "./search-screen"
 import EnrichmentScreen from "./enrichment-screen"
 import ActionScreen from "./action-screen"
 import SettingsScreen from "./settings-screen"
+import SpreadsheetScreen from "./spreadsheet-screen"
 import {
   Target,
   Database,
@@ -359,6 +360,17 @@ const MarketIntelligenceTool = React.memo(() => {
         setCurrentScreen,
         handleExport,
         enrichedCompanies
+      },
+      buttonType: 'normal'
+    },
+    {
+      id: "spreadsheet",
+      name: "Spreadsheet",
+      icon: Database,
+      component: SpreadsheetScreen,
+      props: {
+        setCurrentScreen,
+        initialData: enrichedCompanies
       },
       buttonType: 'normal'
     },
