@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const { query } = await request.json()
+    const { query, numResults } = await request.json()
 
     if (!query) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 })
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ companies: [] })
     }
 
-    // Exa API call
+    // Exa API call - use numResults if provided, otherwise default to 10
     const exaResponse = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         query: `${query} company startup business`,
-        numResults: 10,
+        numResults: numResults || 10, // Use the provided numResults or default to 10
         includeDomains: ["crunchbase.com", "linkedin.com", "angel.co", "techcrunch.com"],
         useAutoprompt: true,
         contents: {

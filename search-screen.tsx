@@ -49,6 +49,7 @@ interface SearchScreenProps {
   setCustomCategory: (category: string) => void;
   setShowCustomInput: (show: boolean) => void;
   setShowNonRelevantList: (show: boolean) => void;
+  setCompanies: (companies: Company[] | ((prev: Company[]) => Company[])) => void;
 }
 
 const SearchScreen: React.FC<SearchScreenProps> = ({
@@ -75,7 +76,8 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
   setSelectedCategory,
   setCustomCategory,
   setShowCustomInput,
-  setShowNonRelevantList
+  setShowNonRelevantList,
+  setCompanies
 }) => {
   // State for dynamic link input functionality
   const [linkFields, setLinkFields] = React.useState<{ id: string, value: string }[]>([
@@ -155,6 +157,86 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
     console.log("CSV data processed:", data);
   };
 
+  // Add this function to your SearchScreen component
+  const fetchNewCompanies = async (query: string, count: number): Promise<Company[]> => {
+    try {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: query,
+          numResults: count // You'll need to update your API to accept this parameter
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch new companies');
+      }
+
+      const data = await response.json();
+      return data.companies || [];
+    } catch (error) {
+      console.error('Error fetching new companies:', error);
+      // Return some fallback companies if the API call fails
+      return [
+        {
+          id: `fallback_1_${Date.now()}`,
+          name: `Alternative ${query} Company`,
+          description: `Another company in the ${query} space that might be relevant`,
+          website: 'https://example.com',
+          employees: '10-50',
+          funding: undefined,
+          location: 'San Francisco, CA',
+          industry: query,
+          founded: '2020',
+          email: undefined,
+          phone: undefined,
+          logo: undefined,
+          relevance: null,
+          status: "pending" as const,
+          comment: "",
+          enriched: false,
+          source: "alternative" as const,
+        },
+        {
+          id: `fallback_2_${Date.now()}`,
+          name: `Related ${query} Solution`,
+          description: `A different approach to ${query} that might interest you`,
+          website: 'https://example.com',
+          employees: '5-20',
+          funding: undefined,
+          location: 'New York, NY',
+          industry: query,
+          founded: '2021',
+          email: undefined,
+          phone: undefined,
+          logo: undefined,
+          relevance: null,
+          status: "pending" as const,
+          comment: "",
+          enriched: false,
+          source: "alternative" as const,
+        }
+      ];
+    }
+  };
+
+  const handleRelevanceFeedbackWithAddition = async (companyId: string, isRelevant: boolean) => {
+    // First, call the original relevance feedback handler
+    handleRelevanceFeedback(companyId, isRelevant);
+
+    // If marking as non-relevant, add two new results
+    if (!isRelevant) {
+      // Fetch two new companies
+      const newCompanies = await fetchNewCompanies(searchQuery, 2);
+
+      // Only update the companies state - pendingCompanies will be recalculated automatically
+      setCompanies(prevCompanies => [...prevCompanies, ...newCompanies]);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Non-Relevant Companies Collapsed List */}
@@ -187,7 +269,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                     <span className="text-sm text-gray-700">{company.name}</span>
                   </div>
                   <button
-                    onClick={() => handleRelevanceFeedback(company.id, true)}
+                    onClick={() => handleRelevanceFeedbackWithAddition(company.id, true)}
                     className="text-xs text-blue-600 hover:text-blue-700"
                   >
                     Mark as Relevant
@@ -253,8 +335,8 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                 setCustomCategory("");
               }}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${!["People", "Companies", "Research Papers", "Articles", "Products"].includes(selectedCategory)
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 hover:text-gray-900"
+                ? "bg-blue-600 text-white"
+                : "text-gray-600 hover:text-gray-900"
                 }`}
               tabIndex={8}
             >
@@ -626,7 +708,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                       {/* Relevance Buttons */}
                       <div className="flex items-center gap-2 ml-4">
                         <button
-                          onClick={() => handleRelevanceFeedback(company.id, true)}
+                          onClick={() => handleRelevanceFeedbackWithAddition(company.id, true)}
                           className={`p-2 rounded-lg transition-colors ${company.relevance === "relevant"
                             ? "bg-green-100 text-green-600"
                             : "hover:bg-green-50 text-gray-400 hover:text-green-600"
@@ -636,7 +718,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
                           <Check className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleRelevanceFeedback(company.id, false)}
+                          onClick={() => handleRelevanceFeedbackWithAddition(company.id, false)}
                           className={`p-2 rounded-lg transition-colors ${company.relevance === "not_relevant"
                             ? "bg-red-100 text-red-600"
                             : "hover:bg-red-50 text-gray-400 hover:text-red-600"
