@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
     Plus,
     MoreHorizontal,
@@ -55,7 +55,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
 
     // Column headers (A, B, C, etc.)
-    const getColumnHeader = (index: number): string => {
+    const getColumnHeader = useCallback((index: number): string => {
         let result = '';
         let num = index;
         do {
@@ -63,7 +63,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             num = Math.floor(num / 26) - 1;
         } while (num >= 0);
         return result;
-    };
+    }, []);
 
     // Initialize cells
     useEffect(() => {
@@ -92,129 +92,94 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     }, [rows, cols, initialData]);
 
     // Handle cell click
-    const handleCellClick = (cellId: string) => {
+    const handleCellClick = useCallback((cellId: string) => {
         setSelectedCell(cellId);
         setEditingCell(null);
         const cell = cells.find(c => c.id === cellId);
         if (cell) {
             setEditValue(cell.value);
         }
-    };
+    }, [cells]);
 
     // Handle cell double click to edit
-    const handleCellDoubleClick = (cellId: string) => {
+    const handleCellDoubleClick = useCallback((cellId: string) => {
         setEditingCell(cellId);
         const cell = cells.find(c => c.id === cellId);
         if (cell) {
             setEditValue(cell.value);
         }
         setTimeout(() => inputRef.current?.focus(), 0);
-    };
+    }, [cells]);
 
     // Handle cell value change
-    const handleCellValueChange = (cellId: string, newValue: string) => {
+    const handleCellValueChange = useCallback((cellId: string, newValue: string) => {
         setCells(prev => prev.map(cell => 
             cell.id === cellId ? { ...cell, value: newValue } : cell
         ));
         setEditValue(newValue);
-    };
+    }, []);
 
     // Handle edit confirm
-    const handleEditConfirm = () => {
+    const handleEditConfirm = useCallback(() => {
         if (editingCell) {
             handleCellValueChange(editingCell, editValue);
             setEditingCell(null);
         }
-    };
+    }, [editingCell, editValue, handleCellValueChange]);
 
     // Handle key press in cell
-    const handleKeyPress = (e: React.KeyboardEvent) => {
+    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             handleEditConfirm();
         } else if (e.key === 'Escape') {
             setEditingCell(null);
         }
-    };
+    }, [handleEditConfirm]);
 
     // Add new row
-    const addRows = (count: number) => {
+    const addRows = useCallback((count: number) => {
         setRows(prev => prev + count);
-    };
+    }, []);
 
     // Add new column
-    const addColumns = (count: number) => {
+    const addColumns = useCallback((count: number) => {
         setCols(prev => prev + count);
-    };
+    }, []);
 
     // Add multiple columns at once
-    const addMultipleColumns = (count: number) => {
+    const addMultipleColumns = useCallback((count: number) => {
         setCols(prev => prev + count);
         console.log(`Added ${count} columns`);
-    };
+    }, []);
 
     // Insert column at specific position
     const insertColumnAt = (position: number) => {
-        // Increase total columns
         setCols(prev => prev + 1);
         
-        // Shift existing cells to the right
-        setCells(prev => {
-            const newCells: Cell[] = [];
-            
-            for (let row = 0; row < rows; row++) {
-                for (let col = 0; col < cols + 1; col++) {
-                    const cellId = `${getColumnHeader(col)}${row + 1}`;
-                    
-                    if (col < position) {
-                        // Keep cells before insertion point
-                        const existingCell = prev.find(c => c.row === row && c.col === col);
-                        newCells.push({
-                            id: cellId,
-                            value: existingCell?.value || "",
-                            row,
-                            col,
-                            isSelected: false,
-                            isEditing: false
-                        });
-                    } else if (col === position) {
-                        // Insert new empty column
-                        newCells.push({
-                            id: cellId,
-                            value: "",
-                            row,
-                            col,
-                            isSelected: false,
-                            isEditing: false
-                        });
-                    } else {
-                        // Shift existing cells to the right
-                        const existingCell = prev.find(c => c.row === row && c.col === col - 1);
-                        newCells.push({
-                            id: cellId,
-                            value: existingCell?.value || "",
-                            row,
-                            col,
-                            isSelected: false,
-                            isEditing: false
-                        });
-                    }
-                }
+        // Update existing cells to shift columns after insertion point
+        setCells(prev => prev.map(cell => {
+            if (cell.col >= position) {
+                // Shift cells to the right
+                return {
+                    ...cell,
+                    col: cell.col + 1,
+                    id: `${getColumnHeader(cell.col + 1)}${cell.row + 1}`
+                };
             }
-            
-            return newCells;
-        });
+            return cell;
+        }));
         
         console.log(`Inserted column at position ${position} (after ${getColumnHeader(position - 1)})`);
     };
 
     // Add column after specific column (by letter)
-    const addColumnAfter = (columnLetter: string) => {
+    const addColumnAfter = useCallback((columnLetter: string) => {
         const columnIndex = columnLetter.charCodeAt(0) - 65; // Convert A=0, B=1, etc.
         insertColumnAt(columnIndex + 1);
-    };
+    }, [insertColumnAt]);
 
     // Function to get AI column suggestions
-    const getColumnSuggestions = async () => {
+    const getColumnSuggestions = useCallback(async () => {
         setLoadingSuggestions(true);
         setShowSuggestions(true);
         
@@ -239,6 +204,10 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 })
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
             setColumnSuggestions(data.suggestions || []);
         } catch (error) {
@@ -255,10 +224,10 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         } finally {
             setLoadingSuggestions(false);
         }
-    };
+    }, [cols, cells, getColumnHeader]);
 
     // Add columns with suggestions
-    const addColumnsWithSuggestions = async (count: number) => {
+    const addColumnsWithSuggestions = useCallback(async (count: number) => {
         try {
             // Get suggestions first
             const existingColumns = Array.from({ length: cols }, (_, index) => getColumnHeader(index));
@@ -272,6 +241,10 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 })
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
             const suggestions = data.suggestions || [];
             
@@ -284,24 +257,25 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                     suggestions.slice(0, count).map(s => s.name).join(', '));
             }
         } catch (error) {
+            console.error('Failed to get suggestions, adding blank columns:', error);
             // Fallback to just adding blank columns
             addMultipleColumns(count);
         }
-    };
+    }, [cols, getColumnHeader, addMultipleColumns]);
 
     // Function to apply a suggestion
-    const applySuggestion = (suggestion: any) => {
+    const applySuggestion = useCallback((suggestion: any) => {
         addColumns(1);
         setShowSuggestions(false);
         
         // Log the suggestion for debugging
         console.log(`Added column: ${suggestion.name} - ${suggestion.description}`);
-    };
+    }, [addColumns]);
 
     // Get cell by position
-    const getCellByPosition = (row: number, col: number) => {
+    const getCellByPosition = useCallback((row: number, col: number) => {
         return cells.find(cell => cell.row === row && cell.col === col);
-    };
+    }, [cells]);
 
     return (
         <div className="h-screen bg-white flex flex-col">
