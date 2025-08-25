@@ -330,6 +330,8 @@ const MarketIntelligenceTool = React.memo(() => {
         handleExampleSelect,
         handleRelevanceFeedback,
         setCurrentScreen,
+        setSearchResults,
+        setCompanies,
         setSelectedCategory,
         setCustomCategory,
         setShowCustomInput,
