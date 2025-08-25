@@ -146,6 +146,12 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         setCols(prev => prev + count);
     };
 
+    // Add multiple columns at once
+    const addMultipleColumns = (count: number) => {
+        setCols(prev => prev + count);
+        console.log(`Added ${count} columns`);
+    };
+
     // Insert column at specific position
     const insertColumnAt = (position: number) => {
         // Increase total columns
@@ -248,6 +254,38 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             ]);
         } finally {
             setLoadingSuggestions(false);
+        }
+    };
+
+    // Add columns with suggestions
+    const addColumnsWithSuggestions = async (count: number) => {
+        try {
+            // Get suggestions first
+            const existingColumns = Array.from({ length: cols }, (_, index) => getColumnHeader(index));
+            const response = await fetch('/api/column-suggestions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    existingColumns,
+                    dataContext: "Market research data",
+                    industryHint: "Business intelligence"
+                })
+            });
+            
+            const data = await response.json();
+            const suggestions = data.suggestions || [];
+            
+            // Add the requested number of columns
+            addMultipleColumns(count);
+            
+            // Show suggestions for the new columns
+            if (suggestions.length > 0) {
+                console.log(`Added ${count} columns. Suggested headers:`, 
+                    suggestions.slice(0, count).map(s => s.name).join(', '));
+            }
+        } catch (error) {
+            // Fallback to just adding blank columns
+            addMultipleColumns(count);
         }
     };
 
@@ -535,6 +573,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             {/* Bottom Controls */}
             <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 bg-gray-50">
                 <div className="flex items-center gap-2">
+                    {/* Row Controls */}
                     <button
                         onClick={() => addRows(1)}
                         className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded"
@@ -569,21 +608,48 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                     
                     <div className="w-px h-6 bg-gray-300 mx-2" />
                     
-                    {/* Quick Column Actions */}
-                    <button
-                        onClick={() => addColumnAfter('J')}
-                        className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100 rounded font-medium"
-                    >
-                        <Plus className="w-3 h-3" />
-                        Add after column J
-                    </button>
-                    
+                    {/* Column Controls */}
                     <button
                         onClick={() => addColumns(1)}
                         className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded"
                     >
                         <Plus className="w-3 h-3" />
                         Add column
+                    </button>
+                    
+                    <button
+                        onClick={() => addMultipleColumns(3)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs text-green-600 hover:bg-green-100 rounded font-medium"
+                    >
+                        <Plus className="w-3 h-3" />
+                        Add 3 columns
+                    </button>
+                    
+                    <button
+                        onClick={() => addMultipleColumns(5)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs text-green-600 hover:bg-green-100 rounded font-medium"
+                    >
+                        <Plus className="w-3 h-3" />
+                        Add 5 columns
+                    </button>
+                    
+                    <button
+                        onClick={() => addColumnsWithSuggestions(5)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs text-purple-600 hover:bg-purple-100 rounded font-medium"
+                    >
+                        🤖 <Plus className="w-3 h-3" />
+                        Add 5 smart columns
+                    </button>
+                    
+                    <div className="w-px h-6 bg-gray-300 mx-2" />
+                    
+                    {/* Special Actions */}
+                    <button
+                        onClick={() => addColumnAfter('J')}
+                        className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100 rounded font-medium"
+                    >
+                        <Plus className="w-3 h-3" />
+                        Add after column J
                     </button>
                 </div>
                 
