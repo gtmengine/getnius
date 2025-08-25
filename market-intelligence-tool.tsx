@@ -7,6 +7,8 @@ import SearchScreen from "./search-screen"
 import EnrichmentScreen from "./enrichment-screen"
 import ActionScreen from "./action-screen"
 import SettingsScreen from "./settings-screen"
+import SpreadsheetScreen from "./spreadsheet-screen"
+import EnhancedSpreadsheetScreen from "./enhanced-spreadsheet-screen"
 import {
   Target,
   Database,
@@ -14,6 +16,8 @@ import {
   Bell,
   Zap,
   Search,
+  Grid3x3,
+  Sparkles,
 } from "lucide-react"
 
 // Define a module type for better organization
@@ -361,6 +365,28 @@ const MarketIntelligenceTool = React.memo(() => {
         setCurrentScreen,
         handleExport,
         enrichedCompanies
+      },
+      buttonType: 'normal'
+    },
+    {
+      id: "spreadsheet",
+      name: "Spreadsheet",
+      icon: Grid3x3,
+      component: SpreadsheetScreen,
+      props: {
+        setCurrentScreen,
+        initialData: enrichedCompanies
+      },
+      buttonType: 'normal'
+    },
+    {
+      id: "enhanced-spreadsheet",
+      name: "Enhanced Sheet",
+      icon: Sparkles,
+      component: EnhancedSpreadsheetScreen,
+      props: {
+        setCurrentScreen,
+        initialData: enrichedCompanies
       },
       buttonType: 'normal'
     },
