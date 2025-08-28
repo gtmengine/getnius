@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { Search, Target, TrendingUp, Users, Sparkles, Shield, ArrowRight } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Search, Target, TrendingUp, Users, Sparkles, Shield, ArrowRight, Key } from "lucide-react"
 
 interface AuthScreenProps {
   onAuthenticated: () => void
@@ -14,12 +15,25 @@ interface AuthScreenProps {
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const { data: session, status } = useSession()
+  const [showPinInput, setShowPinInput] = React.useState(false)
+  const [pinCode, setPinCode] = React.useState("")
+  const [pinError, setPinError] = React.useState("")
 
   React.useEffect(() => {
     if (session) {
       onAuthenticated()
     }
   }, [session, onAuthenticated])
+
+  const handlePinSubmit = () => {
+    if (pinCode === "3103") {
+      // PIN bypass for development/demo
+      onAuthenticated()
+    } else {
+      setPinError("Invalid PIN code")
+      setTimeout(() => setPinError(""), 3000)
+    }
+  }
 
   if (status === "loading") {
     return (
@@ -142,6 +156,62 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                     </svg>
                     Continue with Google
                   </Button>
+                  
+                  <Separator />
+                  
+                  {!showPinInput ? (
+                    <Button
+                      onClick={() => setShowPinInput(true)}
+                      variant="ghost"
+                      className="w-full h-12 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    >
+                      <Key className="w-4 h-4 mr-2" />
+                      Skip Authentication (Demo)
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Enter PIN Code</label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="password"
+                            placeholder="Enter PIN"
+                            value={pinCode}
+                            onChange={(e) => setPinCode(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                handlePinSubmit()
+                              }
+                            }}
+                            className="flex-1"
+                          />
+                          <Button 
+                            onClick={handlePinSubmit} 
+                            size="sm"
+                            type="button"
+                          >
+                            Enter
+                          </Button>
+                        </div>
+                      </div>
+                      {pinError && (
+                        <p className="text-sm text-red-600">{pinError}</p>
+                      )}
+                      <Button
+                        onClick={() => {
+                          setShowPinInput(false)
+                          setPinCode("")
+                          setPinError("")
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-gray-500"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
                   
                   <Separator />
                   

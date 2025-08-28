@@ -1,11 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { useSession } from "next-auth/react"
 import MarketIntelligenceTool from "../market-intelligence-tool"
 import AuthScreen from "../components/auth-screen"
 
 export default function Page() {
   const { data: session, status } = useSession()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   if (status === "loading") {
     return (
@@ -15,9 +17,10 @@ export default function Page() {
     )
   }
 
-  if (!session) {
-    return <AuthScreen onAuthenticated={() => {}} />
+  // If user is authenticated via PIN bypass or has a valid session
+  if (session || isAuthenticated) {
+    return <MarketIntelligenceTool />
   }
 
-  return <MarketIntelligenceTool />
+  return <AuthScreen onAuthenticated={() => setIsAuthenticated(true)} />
 }

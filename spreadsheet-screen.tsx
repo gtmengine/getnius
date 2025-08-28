@@ -17,7 +17,9 @@ import {
     AlignCenter,
     AlignRight,
     ArrowLeft,
-    X
+    X,
+    Upload,
+    FileText
 } from "lucide-react";
 
 interface Cell {
@@ -48,6 +50,12 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
     // New state for column suggestions and menus
     const [columnSuggestions, setColumnSuggestions] = useState<any[]>([]);
+    
+    // CSV file upload state
+    const [csvData, setCsvData] = useState<any[]>([]);
+    const [isProcessingCSV, setIsProcessingCSV] = useState(false);
+    const [csvError, setCsvError] = useState("");
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
     const [selectedColumn, setSelectedColumn] = useState<number | null>(null);
@@ -151,6 +159,106 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         setCols(prev => prev + count);
         console.log(`Added ${count} columns`);
     }, []);
+
+    // CSV file handling functions
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            setCsvError("Please select a CSV file");
+            return;
+        }
+
+        setIsProcessingCSV(true);
+        setCsvError("");
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result as string;
+                const lines = text.split('\n').filter(line => line.trim());
+                
+                if (lines.length === 0) {
+                    setCsvError("CSV file is empty");
+                    setIsProcessingCSV(false);
+                    return;
+                }
+
+                // Parse CSV data
+                const parsedData = lines.map(line => {
+                    // Simple CSV parsing - split by comma and handle quotes
+                    const values = [];
+                    let current = '';
+                    let inQuotes = false;
+                    
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            values.push(current.trim());
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    values.push(current.trim());
+                    return values;
+                });
+
+                setCsvData(parsedData);
+                loadCSVIntoSpreadsheet(parsedData);
+                setIsProcessingCSV(false);
+            } catch (error) {
+                setCsvError("Error parsing CSV file");
+                setIsProcessingCSV(false);
+            }
+        };
+
+        reader.onerror = () => {
+            setCsvError("Error reading file");
+            setIsProcessingCSV(false);
+        };
+
+        reader.readAsText(file);
+    };
+
+    const loadCSVIntoSpreadsheet = (data: string[][]) => {
+        const maxCols = Math.max(...data.map(row => row.length));
+        const newRows = data.length;
+        
+        // Ensure we have enough columns and rows
+        if (maxCols > cols) setCols(maxCols);
+        if (newRows > rows) setRows(newRows);
+
+        // Create new cells with CSV data
+        const newCells: Cell[] = [];
+        
+        for (let row = 0; row < newRows; row++) {
+            for (let col = 0; col < maxCols; col++) {
+                const value = data[row]?.[col] || '';
+                newCells.push({
+                    id: `${row}-${col}`,
+                    value: value,
+                    row: row,
+                    col: col,
+                    isSelected: false,
+                    isEditing: false
+                });
+            }
+        }
+
+        setCells(newCells);
+    };
+
+    const clearCSVData = () => {
+        setCsvData([]);
+        setCsvError("");
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
 
     // Insert column at specific position
     const insertColumnAt = (position: number) => {
@@ -312,6 +420,62 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
             {/* Toolbar */}
             <div className="flex items-center gap-1 px-4 py-2 border-b border-gray-200 bg-gray-50">
+                {/* CSV Upload Section */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={isProcessingCSV}
+                />
+                
+                {!csvData.length ? (
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300"
+                        disabled={isProcessingCSV}
+                    >
+                        {isProcessingCSV ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <Upload className="w-4 h-4" />
+                                Choose CSV File
+                            </>
+                        )}
+                    </button>
+                ) : (
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700"
+                        >
+                            <FileText className="w-3 h-3" />
+                            Change CSV
+                        </button>
+                        <button
+                            onClick={clearCSVData}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                        >
+                            <X className="w-3 h-3" />
+                            Clear
+                        </button>
+                    </div>
+                )}
+
+                {csvError && (
+                    <div className="flex items-center gap-1 text-red-600 text-xs ml-2">
+                        <X className="w-3 h-3" />
+                        {csvError}
+                    </div>
+                )}
+                
+                <div className="w-px h-6 bg-gray-300 mx-2" />
+                
                 <button className="p-1 hover:bg-gray-200 rounded">
                     <Undo className="w-4 h-4 text-gray-600" />
                 </button>

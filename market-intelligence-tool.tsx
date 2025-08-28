@@ -257,6 +257,7 @@ const MarketIntelligenceTool = React.memo(() => {
   // Handle autocomplete suggestion selection
   const handleSuggestionSelect = useCallback((suggestion: any) => {
     setSearchQuery(suggestion.text)
+    
     setShowExamples(false)
     setTimeout(() => handleSearch(suggestion.text), 50)
   }, [handleSearch])
