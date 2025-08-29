@@ -3,6 +3,7 @@
 import { useSession, signIn, signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Image from 'next/image'
 
 export default function AuthTest() {
   const { data: session, status } = useSession()
@@ -24,7 +25,7 @@ export default function AuthTest() {
             <p className="text-sm">{session.user?.name}</p>
           </div>
           {session.user?.image && (
-            <img 
+            <Image 
               src={session.user.image} 
               alt="Profile" 
               className="w-12 h-12 rounded-full"
