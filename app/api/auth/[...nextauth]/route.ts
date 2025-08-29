@@ -1,11 +1,15 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
+import { env, validateEnvironment } from "@/lib/env"
+
+// Validate environment on startup
+validateEnvironment()
 
 const handler = NextAuth({
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
     }),
   ],
   callbacks: {
@@ -16,7 +20,15 @@ const handler = NextAuth({
       return token
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-development",
+  pages: {
+    signIn: '/',
+    error: '/',
+  },
+  session: {
+    strategy: "jwt",
+  },
+  secret: env.NEXTAUTH_SECRET,
+  debug: env.NODE_ENV === 'development',
 })
 
 export { handler as GET, handler as POST }
