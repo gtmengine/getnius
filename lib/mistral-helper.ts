@@ -27,7 +27,7 @@ export function getMockSuggestions() {
 // Generate suggestions using Mistral API
 export async function generateWithMistral(apiKey: string, inputText: string) {
   const TEST_MODE = process.env.NODE_ENV === 'development' && 
-                   process.env.MISTRAL_DRY_RUN === 'true'
+                    process.env.MISTRAL_DRY_RUN === 'true'
 
   if (TEST_MODE) {
     console.log("[DRY RUN] Would send to Mistral:", {
