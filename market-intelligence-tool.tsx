@@ -10,6 +10,7 @@ import ActionScreen from "./action-screen"
 import SettingsScreen from "./settings-screen"
 import SpreadsheetScreen from "./spreadsheet-screen"
 import EnhancedSpreadsheetScreen from "./enhanced-spreadsheet-screen"
+import { EnhancedSearchScreen } from "./components/enhanced-search-screen"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -391,6 +392,16 @@ const MarketIntelligenceTool = React.memo(() => {
         setCustomCategory,
         setShowCustomInput,
         setShowNonRelevantList
+      },
+      buttonType: 'normal'
+    },
+    {
+      id: "streaming-search",
+      name: "AI Search",
+      icon: Sparkles,
+      component: EnhancedSearchScreen,
+      props: {
+        onBack: () => setCurrentScreen("search")
       },
       buttonType: 'normal'
     },
