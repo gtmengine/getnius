@@ -247,46 +247,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, [editingCell, editValue, handleCellValueChange]);
 
-    // Handle query submission (moved up to avoid dependency issues)
-    const handleQuerySubmit = useCallback(async (query: string) => {
-        if (!query.trim()) return;
-
-        setIsProcessingQuery(true);
-        setQueryHistory(prev => [query, ...prev.slice(0, 9)]); // Keep last 10 queries
-
-        try {
-            // Determine query type
-            if (query.startsWith('=')) {
-                // Formula calculation
-                handleFormulaCalculation(query);
-            } else {
-                // All non-formula queries go to search to populate spreadsheet
-                await handleSearchQuery(query);
-            }
-        } catch (error) {
-            console.error('Query processing error:', error);
-            // Show error in a cell or notification
-        } finally {
-            setIsProcessingQuery(false);
-        }
-    }, [handleFormulaCalculation, handleSearchQuery]);
-
-    // Handle key press in cell (only for editing-specific keys)
-    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            // Check if this is a query (starts with natural language or specific patterns)
-            if (editValue && !editValue.startsWith('=') && editValue.length > 3) {
-                handleQuerySubmit(editValue);
-            } else {
-                handleEditConfirm();
-            }
-        } else if (e.key === 'Escape') {
-            setEditingCell(null);
-        }
-        // Note: Copy/paste is handled by global keyboard handler
-    }, [handleEditConfirm, editValue, handleQuerySubmit]);
-
-    // Handle formula calculations
+    // Handle formula calculations (moved before handleQuerySubmit)
     const handleFormulaCalculation = useCallback((formula: string) => {
         try {
             // Simple formula parsing - extend as needed
@@ -305,7 +266,49 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, [selectedCell, handleCellValueChange]);
 
-    // Handle search queries - using mock data like search screen
+    // Populate spreadsheet with Exa results in specific format: Company | Description | Webpage | Industry (moved before handleSearchQuery)
+    const populateSpreadsheetWithExaResults = useCallback((results: any[]) => {
+        console.log('populateSpreadsheetWithExaResults called with:', results);
+        if (!results.length) {
+            console.log('No results to populate');
+            return;
+        }
+
+        // Clear existing data and set headers in row 1
+        const headers = ['Company', 'Description', 'Webpage', 'Industry'];
+        console.log('Setting headers:', headers);
+        headers.forEach((header, colIndex) => {
+            const cellId = `${getColumnHeader(colIndex)}1`;
+            console.log(`Setting header ${header} in cell ${cellId}`);
+            handleCellValueChange(cellId, header);
+        });
+
+        // Populate data starting from row 2
+        results.forEach((result, index) => {
+            const row = index + 2; // Start from row 2 (row 1 is headers)
+            const data = [
+                result.company || 'Unknown Company',
+                result.description || 'No description available',
+                result.webpage || 'No website',
+                result.industry || 'Unknown Industry'
+            ];
+
+            data.forEach((value, colIndex) => {
+                const cellId = `${getColumnHeader(colIndex)}${row}`;
+                handleCellValueChange(cellId, value.toString());
+            });
+        });
+
+        // Ensure we have enough rows
+        const neededRows = results.length + 2; // +1 for header, +1 for buffer
+        if (neededRows > rows) {
+            setRows(neededRows);
+        }
+
+        setQueryResults(results);
+    }, [getColumnHeader, handleCellValueChange, rows]);
+
+    // Handle search queries - using mock data like search screen (moved before handleQuerySubmit)
     const handleSearchQuery = useCallback(async (query: string) => {
         console.log('handleSearchQuery called with query:', query);
         try {
@@ -389,7 +392,46 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         } catch (error) {
             console.error('Search query error:', error);
         }
-    }, []);
+    }, [populateSpreadsheetWithExaResults]);
+
+    // Handle query submission (moved up to avoid dependency issues)
+    const handleQuerySubmit = useCallback(async (query: string) => {
+        if (!query.trim()) return;
+
+        setIsProcessingQuery(true);
+        setQueryHistory(prev => [query, ...prev.slice(0, 9)]); // Keep last 10 queries
+
+        try {
+            // Determine query type
+            if (query.startsWith('=')) {
+                // Formula calculation
+                handleFormulaCalculation(query);
+            } else {
+                // All non-formula queries go to search to populate spreadsheet
+                await handleSearchQuery(query);
+            }
+        } catch (error) {
+            console.error('Query processing error:', error);
+            // Show error in a cell or notification
+        } finally {
+            setIsProcessingQuery(false);
+        }
+    }, [handleFormulaCalculation, handleSearchQuery]);
+
+    // Handle key press in cell (only for editing-specific keys)
+    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            // Check if this is a query (starts with natural language or specific patterns)
+            if (editValue && !editValue.startsWith('=') && editValue.length > 3) {
+                handleQuerySubmit(editValue);
+            } else {
+            handleEditConfirm();
+            }
+        } else if (e.key === 'Escape') {
+            setEditingCell(null);
+        }
+        // Note: Copy/paste is handled by global keyboard handler
+    }, [handleEditConfirm, editValue, handleQuerySubmit]);
 
     // Handle direct queries (company names, etc.)
     const handleDirectQuery = useCallback(async (query: string) => {
@@ -511,48 +553,6 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
         setQueryResults(results);
     }, [cells, rows, getColumnHeader, handleCellValueChange]);
-
-    // Populate spreadsheet with Exa results in specific format: Company | Description | Webpage | Industry
-    const populateSpreadsheetWithExaResults = useCallback((results: any[]) => {
-        console.log('populateSpreadsheetWithExaResults called with:', results);
-        if (!results.length) {
-            console.log('No results to populate');
-            return;
-        }
-
-        // Clear existing data and set headers in row 1
-        const headers = ['Company', 'Description', 'Webpage', 'Industry'];
-        console.log('Setting headers:', headers);
-        headers.forEach((header, colIndex) => {
-            const cellId = `${getColumnHeader(colIndex)}1`;
-            console.log(`Setting header ${header} in cell ${cellId}`);
-            handleCellValueChange(cellId, header);
-        });
-
-        // Populate data starting from row 2
-        results.forEach((result, index) => {
-            const row = index + 2; // Start from row 2 (row 1 is headers)
-            const data = [
-                result.company || 'Unknown Company',
-                result.description || 'No description available',
-                result.webpage || 'No website',
-                result.industry || 'Unknown Industry'
-            ];
-
-            data.forEach((value, colIndex) => {
-                const cellId = `${getColumnHeader(colIndex)}${row}`;
-                handleCellValueChange(cellId, value.toString());
-            });
-        });
-
-        // Ensure we have enough rows
-        const neededRows = results.length + 2; // +1 for header, +1 for buffer
-        if (neededRows > rows) {
-            setRows(neededRows);
-        }
-
-        setQueryResults(results);
-    }, [getColumnHeader, handleCellValueChange, rows]);
 
     // Calculate sum of range (simple implementation)
     const calculateSumRange = useCallback((start: string, end: string): number => {
