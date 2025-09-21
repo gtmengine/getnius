@@ -112,34 +112,83 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
                     },
                 ],
                 cells: [
-                    [0, 0, 'Company'],
-                    [0, 1, 'Revenue'],
-                    [0, 2, 'Employees'],
-                    [0, 3, 'Industry'],
-                    [1, 0, 'OpenAI'],
-                    [1, 1, '$1.3B'],
-                    [1, 2, '500+'],
-                    [1, 3, 'AI/ML'],
-                    [2, 0, 'Anthropic'],
-                    [2, 1, '$750M'],
-                    [2, 2, '150+'],
-                    [2, 3, 'AI Safety'],
-                    [2, 6, { value: 'Formula Cell', style: 0 }],
+                    // Headers
+                    [0, 0, 'YOUR SEARCH REQUEST'],
+                    [0, 1, 'COLUMN NAME'],
+                    [0, 2, 'Enter a short, descriptive header for this column'],
+                    
+                    // Data rows
+                    [1, 0, 'Entity to Research - Replace each placeholder with the company, product, or topic you need to look up.:'],
+                    [1, 1, 'Data Type (text/ url / email)'],
+                    [1, 2, 'Data Type - Specify the expected data format'],
+                    
+                    [2, 0, 'Prompt Details'],
+                    [2, 1, 'Prompt Details'],
+                    [2, 2, 'Prompt Details - Give prompting instructions'],
+                    
+                    [3, 0, 'Format Options'],
+                    [3, 1, 'Format Options'],
+                    [3, 2, 'Format Options - Define output formatting rules'],
+                    
+                    // Additional sample data
+                    [5, 0, 'Company'],
+                    [5, 1, 'Revenue'],
+                    [5, 2, 'Employees'],
+                    [5, 3, 'Industry'],
+                    [6, 0, 'OpenAI'],
+                    [6, 1, '$1.3B'],
+                    [6, 2, '500+'],
+                    [6, 3, 'AI/ML'],
+                    [7, 0, 'Anthropic'],
+                    [7, 1, '$750M'],
+                    [7, 2, '150+'],
+                    [7, 3, 'AI Safety'],
+                    [7, 6, { value: 'Formula Cell', style: 0 }],
                     [9, 5, { value: '', formula: '=sum(A1:A10)' }],
                 ],
             })
             .render();
 
-            // Add custom style
-            const styleIndex = table.addStyle({
+            // Add custom styles
+            const yellowHeaderStyle = table.addStyle({
                 bold: true,
-                italic: true,
-                underline: true,
-                color: '#1b1c1d',
+                backgroundColor: '#ffff00', // Yellow background like in image
+                color: '#000',
+                fontSize: 12,
+                align: 'left'
             });
 
-            // Set a styled cell
-            table.cell(2, 2, { value: 'Styled Cell', style: styleIndex }).render();
+            const headerStyle = table.addStyle({
+                bold: true,
+                backgroundColor: '#f8f9fa',
+                color: '#333',
+                fontSize: 11,
+                align: 'left'
+            });
+
+            const descriptionStyle = table.addStyle({
+                backgroundColor: '#f8f9fa',
+                color: '#666',
+                fontSize: 10,
+                align: 'left'
+            });
+
+            // Apply yellow background to "YOUR SEARCH REQUEST" column (first column)
+            table.cell(0, 0, { value: 'YOUR SEARCH REQUEST', style: yellowHeaderStyle });
+            table.cell(1, 0, { value: 'Entity to Research - Replace each placeholder with the company, product, or topic you need to look up.:', style: yellowHeaderStyle });
+            table.cell(2, 0, { value: 'Prompt Details', style: yellowHeaderStyle });
+            table.cell(3, 0, { value: 'Format Options', style: yellowHeaderStyle });
+
+            // Apply header style to other headers
+            table.cell(0, 1, { value: 'COLUMN NAME', style: headerStyle });
+            table.cell(0, 2, { value: 'Enter a short, descriptive header for this column', style: headerStyle });
+
+            // Apply description styles to other cells
+            table.cell(1, 2, { value: 'Data Type - Specify the expected data format', style: descriptionStyle });
+            table.cell(2, 2, { value: 'Prompt Details - Give prompting instructions', style: descriptionStyle });
+            table.cell(3, 2, { value: 'Format Options - Define output formatting rules', style: descriptionStyle });
+
+            table.render();
 
             // Log cell info
             console.log('Wolf Table cell[2,2]:', table.cell(2, 2));
@@ -230,35 +279,56 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
         ctx.font = '11px Arial';
         ctx.textAlign = 'left';
 
-        // Sample data from Wolf Table example
+        // Sample data matching the search request structure
         const sampleData = [
-            [1, 1, 'Company'],
-            [1, 2, 'Revenue'], 
-            [1, 3, 'Employees'],
-            [1, 4, 'Industry'],
-            [2, 1, 'OpenAI'],
-            [2, 2, '$1.3B'],
-            [2, 3, '500+'],
-            [2, 4, 'AI/ML'],
-            [3, 1, 'Anthropic'],
-            [3, 2, '$750M'],
-            [3, 3, '150+'],
-            [3, 4, 'AI Safety'],
-            [4, 1, 'Stability AI'],
-            [4, 2, '$101M'],
-            [4, 3, '100+'],
-            [4, 4, 'Generative AI'],
+            // Headers
+            [1, 1, 'YOUR SEARCH REQUEST'],
+            [1, 2, 'COLUMN NAME'],
+            [1, 3, 'Enter a short, descriptive header'],
+            
+            // Data rows
+            [2, 1, 'Entity to Research'],
+            [2, 2, 'Data Type (text/url/email)'],
+            [2, 3, 'Data Type - Specify format'],
+            
+            [3, 1, 'Prompt Details'],
+            [3, 2, 'Prompt Details'],
+            [3, 3, 'Prompt Details - Give instructions'],
+            
+            [4, 1, 'Format Options'],
+            [4, 2, 'Format Options'],
+            [4, 3, 'Format Options - Define rules'],
+            
+            // Additional data
+            [6, 1, 'Company'],
+            [6, 2, 'Revenue'],
+            [6, 3, 'Employees'],
+            [6, 4, 'Industry'],
+            [7, 1, 'OpenAI'],
+            [7, 2, '$1.3B'],
+            [7, 3, '500+'],
+            [7, 4, 'AI/ML'],
         ];
 
         sampleData.forEach(([row, col, value]) => {
             const x = col * cellWidth + 5;
             const y = row * cellHeight + cellHeight / 2 + 4;
+            
+            // Add yellow background for first column (YOUR SEARCH REQUEST)
+            if (col === 1 && row <= 4) {
+                ctx.fillStyle = '#ffff00'; // Yellow background
+                ctx.fillRect((col - 1) * cellWidth, (row - 1) * cellHeight, cellWidth, cellHeight);
+                ctx.fillStyle = '#000'; // Black text on yellow
+            } else {
+                ctx.fillStyle = '#333'; // Regular text color
+            }
+            
             ctx.fillText(value.toString(), x, y);
         });
 
         // Add some styled cells to simulate Wolf Table features
         ctx.fillStyle = 'rgba(33, 186, 69, 0.1)';
-        ctx.fillRect(cellWidth, cellHeight, cellWidth * 3, cellHeight);
+        ctx.fillRect(cellWidth, cellHeight * 5, cellWidth * 3, cellHeight);
         
         // Add border simulation
         ctx.strokeStyle = '#21ba45';
