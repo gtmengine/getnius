@@ -202,6 +202,56 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, [selectedCell, handleCellValueChange]);
 
+    // Populate spreadsheet with Exa results in specific format: Company | Description | Webpage | Industry
+    const populateSpreadsheetWithExaResults = useCallback((results: any[]) => {
+        console.log('🎯 PopulateSpreadsheetWithExaResults called with:', results);
+        
+        if (!results.length) {
+            console.log('❌ No results to populate');
+            return;
+        }
+
+        // Clear existing data and set headers in row 1
+        const headers = ['Company', 'Description', 'Webpage', 'Industry'];
+        console.log('📝 Setting headers:', headers);
+        
+        headers.forEach((header, colIndex) => {
+            const cellId = `${getColumnHeader(colIndex)}1`;
+            console.log(`📝 Setting header "${header}" in cell ${cellId}`);
+            handleCellValueChange(cellId, header);
+        });
+
+        // Populate data starting from row 2
+        results.forEach((result, index) => {
+            const row = index + 2; // Start from row 2 (row 1 is headers)
+            const data = [
+                result.company || 'Unknown Company',
+                result.description || 'No description available',
+                result.webpage || 'No website',
+                result.industry || 'Unknown Industry'
+            ];
+
+            console.log(`📝 Row ${row} data:`, data);
+
+            data.forEach((value, colIndex) => {
+                const cellId = `${getColumnHeader(colIndex)}${row}`;
+                console.log(`📝 Setting "${value}" in cell ${cellId}`);
+                handleCellValueChange(cellId, value.toString());
+            });
+        });
+
+        // Ensure we have enough rows
+        const neededRows = results.length + 2; // +1 for header, +1 for buffer
+        console.log(`📏 Current rows: ${rows}, needed: ${neededRows}`);
+        if (neededRows > rows) {
+            console.log(`📏 Expanding rows to ${neededRows}`);
+            setRows(neededRows);
+        }
+
+        setQueryResults(results);
+        console.log('✅ Population complete, results stored');
+    }, [getColumnHeader, handleCellValueChange, rows]);
+
     // Handle search queries - using Exa.ai API specifically
     const handleSearchQuery = useCallback(async (query: string) => {
         console.log('🔍 Starting search query:', query);
@@ -339,56 +389,6 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
         setQueryResults(results);
     }, [cells, rows, getColumnHeader, handleCellValueChange]);
-
-    // Populate spreadsheet with Exa results in specific format: Company | Description | Webpage | Industry
-    const populateSpreadsheetWithExaResults = useCallback((results: any[]) => {
-        console.log('🎯 PopulateSpreadsheetWithExaResults called with:', results);
-        
-        if (!results.length) {
-            console.log('❌ No results to populate');
-            return;
-        }
-
-        // Clear existing data and set headers in row 1
-        const headers = ['Company', 'Description', 'Webpage', 'Industry'];
-        console.log('📝 Setting headers:', headers);
-        
-        headers.forEach((header, colIndex) => {
-            const cellId = `${getColumnHeader(colIndex)}1`;
-            console.log(`📝 Setting header "${header}" in cell ${cellId}`);
-            handleCellValueChange(cellId, header);
-        });
-
-        // Populate data starting from row 2
-        results.forEach((result, index) => {
-            const row = index + 2; // Start from row 2 (row 1 is headers)
-            const data = [
-                result.company || 'Unknown Company',
-                result.description || 'No description available',
-                result.webpage || 'No website',
-                result.industry || 'Unknown Industry'
-            ];
-
-            console.log(`📝 Row ${row} data:`, data);
-
-            data.forEach((value, colIndex) => {
-                const cellId = `${getColumnHeader(colIndex)}${row}`;
-                console.log(`📝 Setting "${value}" in cell ${cellId}`);
-                handleCellValueChange(cellId, value.toString());
-            });
-        });
-
-        // Ensure we have enough rows
-        const neededRows = results.length + 2; // +1 for header, +1 for buffer
-        console.log(`📏 Current rows: ${rows}, needed: ${neededRows}`);
-        if (neededRows > rows) {
-            console.log(`📏 Expanding rows to ${neededRows}`);
-            setRows(neededRows);
-        }
-
-        setQueryResults(results);
-        console.log('✅ Population complete, results stored');
-    }, [getColumnHeader, handleCellValueChange, rows]);
 
     // Calculate sum of range (simple implementation)
     const calculateSumRange = useCallback((start: string, end: string): number => {
