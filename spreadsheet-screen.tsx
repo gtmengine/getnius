@@ -274,12 +274,9 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             if (query.startsWith('=')) {
                 // Formula calculation
                 handleFormulaCalculation(query);
-            } else if (query.toLowerCase().includes('find') || query.toLowerCase().includes('search')) {
-                // Search query - integrate with existing search APIs
-                await handleSearchQuery(query);
             } else {
-                // Direct value or company name
-                await handleDirectQuery(query);
+                // All non-formula queries go to search to populate spreadsheet
+                await handleSearchQuery(query);
             }
         } catch (error) {
             console.error('Query processing error:', error);
@@ -310,6 +307,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
     // Handle search queries - using mock data like search screen
     const handleSearchQuery = useCallback(async (query: string) => {
+        console.log('handleSearchQuery called with query:', query);
         try {
             // Mock companies data similar to search screen
             const mockCompanies = [
@@ -381,9 +379,12 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 industry: company.industry
             }));
             
+            console.log('Formatted results:', formattedResults);
+            
             // Simulate API delay
             await new Promise(resolve => setTimeout(resolve, 500));
             
+            console.log('About to call populateSpreadsheetWithExaResults');
             populateSpreadsheetWithExaResults(formattedResults);
         } catch (error) {
             console.error('Search query error:', error);
@@ -513,12 +514,18 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
     // Populate spreadsheet with Exa results in specific format: Company | Description | Webpage | Industry
     const populateSpreadsheetWithExaResults = useCallback((results: any[]) => {
-        if (!results.length) return;
+        console.log('populateSpreadsheetWithExaResults called with:', results);
+        if (!results.length) {
+            console.log('No results to populate');
+            return;
+        }
 
         // Clear existing data and set headers in row 1
         const headers = ['Company', 'Description', 'Webpage', 'Industry'];
+        console.log('Setting headers:', headers);
         headers.forEach((header, colIndex) => {
             const cellId = `${getColumnHeader(colIndex)}1`;
+            console.log(`Setting header ${header} in cell ${cellId}`);
             handleCellValueChange(cellId, header);
         });
 
