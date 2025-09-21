@@ -202,49 +202,57 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, [selectedCell, handleCellValueChange]);
 
-    // Handle search queries - using same functionality as search screen
+    // Handle search queries - using Exa.ai API specifically
     const handleSearchQuery = useCallback(async (query: string) => {
         try {
-            // Use the same searchCompanies function as search screen
-            const companies = await searchCompanies(query);
+            // Use Exa.ai API directly for better results
+            const response = await fetch('/api/search/exa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, numResults: 10 })
+            });
             
-            if (companies && companies.length > 0) {
-                // Convert Company objects to spreadsheet format
-                const formattedResults = companies.map(company => ({
-                    name: company.name,
-                    title: company.name,
-                    description: company.description,
-                    website: company.website,
-                    url: company.website,
-                    employees: company.employees,
-                    location: company.location,
-                    industry: company.industry,
-                    founded: company.founded,
-                    source: company.source,
-                    status: company.status
-                }));
-                
-                populateSpreadsheetWithResults(formattedResults);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.companies && data.companies.length > 0) {
+                    // Format results for spreadsheet with specific columns
+                    const formattedResults = data.companies.map((company: Company) => ({
+                        company: company.name,
+                        description: company.description,
+                        webpage: company.website,
+                        industry: company.industry || 'Unknown'
+                    }));
+                    
+                    populateSpreadsheetWithExaResults(formattedResults);
+                }
             }
         } catch (error) {
-            console.error('Search query error:', error);
+            console.error('Exa search query error:', error);
         }
     }, []);
 
     // Handle direct queries (company names, etc.)
     const handleDirectQuery = useCallback(async (query: string) => {
         try {
-            // Try to enrich the query as a company name
-            const response = await fetch('/api/search/google', {
+            // Use Exa API for direct company searches too
+            const response = await fetch('/api/search/exa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: `${query} company information`, limit: 5 })
+                body: JSON.stringify({ query: `${query} company information`, numResults: 5 })
             });
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.results && data.results.length > 0) {
-                    populateSpreadsheetWithResults(data.results);
+                if (data.companies && data.companies.length > 0) {
+                    // Format results for spreadsheet
+                    const formattedResults = data.companies.map((company: Company) => ({
+                        company: company.name,
+                        description: company.description,
+                        webpage: company.website,
+                        industry: company.industry || 'Unknown'
+                    }));
+                    
+                    populateSpreadsheetWithExaResults(formattedResults);
                 } else {
                     // Just put the value in the selected cell
                     if (selectedCell) {
@@ -311,6 +319,42 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
         setQueryResults(results);
     }, [cells, rows, getColumnHeader, handleCellValueChange]);
+
+    // Populate spreadsheet with Exa results in specific format: Company | Description | Webpage | Industry
+    const populateSpreadsheetWithExaResults = useCallback((results: any[]) => {
+        if (!results.length) return;
+
+        // Clear existing data and set headers in row 1
+        const headers = ['Company', 'Description', 'Webpage', 'Industry'];
+        headers.forEach((header, colIndex) => {
+            const cellId = `${getColumnHeader(colIndex)}1`;
+            handleCellValueChange(cellId, header);
+        });
+
+        // Populate data starting from row 2
+        results.forEach((result, index) => {
+            const row = index + 2; // Start from row 2 (row 1 is headers)
+            const data = [
+                result.company || 'Unknown Company',
+                result.description || 'No description available',
+                result.webpage || 'No website',
+                result.industry || 'Unknown Industry'
+            ];
+
+            data.forEach((value, colIndex) => {
+                const cellId = `${getColumnHeader(colIndex)}${row}`;
+                handleCellValueChange(cellId, value.toString());
+            });
+        });
+
+        // Ensure we have enough rows
+        const neededRows = results.length + 2; // +1 for header, +1 for buffer
+        if (neededRows > rows) {
+            setRows(neededRows);
+        }
+
+        setQueryResults(results);
+    }, [getColumnHeader, handleCellValueChange, rows]);
 
     // Calculate sum of range (simple implementation)
     const calculateSumRange = useCallback((start: string, end: string): number => {
@@ -725,7 +769,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                         className={`w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-all ${
                             isProcessingQuery ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
-                        placeholder="Search in the web... (e.g., 'Find companies in fintech', 'AI startups in healthcare', or specific company names)"
+                        placeholder="Search companies with Exa.ai... (e.g., 'AI companies in healthcare', 'fintech startups 2024', or 'Tesla')"
                     />
                     <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
                         {isProcessingQuery && (
@@ -751,11 +795,11 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             <div className="px-4 py-2 bg-blue-50 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <span className="text-xs font-medium text-blue-700">Web Search Examples:</span>
+                        <span className="text-xs font-medium text-blue-700">Exa.ai Search Examples:</span>
                         <div className="flex gap-2">
                             {[
                                 "AI companies in healthcare",
-                                "fintech startups 2024",
+                                "fintech startups 2024", 
                                 "SaaS companies in Europe",
                                 "renewable energy companies"
                             ].map((example, index) => (
