@@ -98,19 +98,9 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
             .freeze('D5')
             .merge('F10:G11')
             .merge('I10:K11')
-            .addBorder('E8:L12', 'all', 'medium', '#21ba45')
             .formulaParser((v: string) => `${v}-formula`)
             .data({
-                styles: [
-                    { 
-                        bold: true, 
-                        strikethrough: true, 
-                        color: '#21ba45', 
-                        italic: true, 
-                        align: 'center', 
-                        fontSize: 12 
-                    },
-                ],
+                styles: [],
                 cells: [
                     // Headers
                     [0, 0, 'YOUR SEARCH REQUEST'],
@@ -143,50 +133,23 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
                     [7, 1, '$750M'],
                     [7, 2, '150+'],
                     [7, 3, 'AI Safety'],
-                    [7, 6, { value: 'Formula Cell', style: 0 }],
                     [9, 5, { value: '', formula: '=sum(A1:A10)' }],
                 ],
             })
             .render();
 
-            // Add custom styles
-            const yellowHeaderStyle = table.addStyle({
+            // Add basic text style without background colors
+            const basicStyle = table.addStyle({
                 bold: true,
-                backgroundColor: '#ffff00', // Yellow background like in image
-                color: '#000',
-                fontSize: 12,
-                align: 'left'
-            });
-
-            const headerStyle = table.addStyle({
-                bold: true,
-                backgroundColor: '#f8f9fa',
                 color: '#333',
                 fontSize: 11,
                 align: 'left'
             });
 
-            const descriptionStyle = table.addStyle({
-                backgroundColor: '#f8f9fa',
-                color: '#666',
-                fontSize: 10,
-                align: 'left'
-            });
-
-            // Apply yellow background to "YOUR SEARCH REQUEST" column (first column)
-            table.cell(0, 0, { value: 'YOUR SEARCH REQUEST', style: yellowHeaderStyle });
-            table.cell(1, 0, { value: 'Entity to Research - Replace each placeholder with the company, product, or topic you need to look up.:', style: yellowHeaderStyle });
-            table.cell(2, 0, { value: 'Prompt Details', style: yellowHeaderStyle });
-            table.cell(3, 0, { value: 'Format Options', style: yellowHeaderStyle });
-
-            // Apply header style to other headers
-            table.cell(0, 1, { value: 'COLUMN NAME', style: headerStyle });
-            table.cell(0, 2, { value: 'Enter a short, descriptive header for this column', style: headerStyle });
-
-            // Apply description styles to other cells
-            table.cell(1, 2, { value: 'Data Type - Specify the expected data format', style: descriptionStyle });
-            table.cell(2, 2, { value: 'Prompt Details - Give prompting instructions', style: descriptionStyle });
-            table.cell(3, 2, { value: 'Format Options - Define output formatting rules', style: descriptionStyle });
+            // Apply basic style to key cells (no background colors)
+            table.cell(0, 0, { value: 'YOUR SEARCH REQUEST', style: basicStyle });
+            table.cell(0, 1, { value: 'COLUMN NAME', style: basicStyle });
+            table.cell(0, 2, { value: 'Enter a short, descriptive header for this column', style: basicStyle });
 
             table.render();
 
@@ -311,29 +274,13 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
         ];
 
         sampleData.forEach(([row, col, value]) => {
-            const x = col * cellWidth + 5;
-            const y = row * cellHeight + cellHeight / 2 + 4;
+            const x = (col as number) * cellWidth + 5;
+            const y = (row as number) * cellHeight + cellHeight / 2 + 4;
             
-            // Add yellow background for first column (YOUR SEARCH REQUEST)
-            if (col === 1 && row <= 4) {
-                ctx.fillStyle = '#ffff00'; // Yellow background
-                ctx.fillRect((col - 1) * cellWidth, (row - 1) * cellHeight, cellWidth, cellHeight);
-                ctx.fillStyle = '#000'; // Black text on yellow
-            } else {
-                ctx.fillStyle = '#333'; // Regular text color
-            }
-            
+            // Use regular text color for all cells
+            ctx.fillStyle = '#333';
             ctx.fillText(value.toString(), x, y);
         });
-
-        // Add some styled cells to simulate Wolf Table features
-        ctx.fillStyle = 'rgba(33, 186, 69, 0.1)';
-        ctx.fillRect(cellWidth, cellHeight * 5, cellWidth * 3, cellHeight);
-        
-        // Add border simulation
-        ctx.strokeStyle = '#21ba45';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(cellWidth, cellHeight * 4, cellWidth * 3, cellHeight * 2);
     };
 
     const handleExportData = () => {
@@ -549,9 +496,9 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
                             className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
                             onClick={() => {
                                 if (tableInstanceRef.current) {
-                                    // Add border to range
-                                    tableInstanceRef.current.addBorder('A1:D4', 'all', 'thick', '#e74c3c').render();
-                                    console.log('Border added to A1:D4');
+                                    // Add simple border without color
+                                    tableInstanceRef.current.addBorder('A1:D4', 'all', 'thin', '#000').render();
+                                    console.log('Simple border added to A1:D4');
                                 } else {
                                     console.log('Add border clicked (Wolf Table not available)');
                                 }
@@ -563,23 +510,78 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
                             className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
                             onClick={() => {
                                 if (tableInstanceRef.current) {
-                                    // Add styled cell
+                                    // Add simple text style without background
                                     const style = tableInstanceRef.current.addStyle({
                                         bold: true,
-                                        backgroundColor: '#f39c12',
-                                        color: '#fff'
+                                        color: '#333'
                                     });
                                     tableInstanceRef.current.cell(4, 1, { 
-                                        value: 'Highlighted', 
+                                        value: 'Bold Text', 
                                         style 
                                     }).render();
-                                    console.log('Styled cell added');
+                                    console.log('Simple styled cell added');
                                 } else {
                                     console.log('Add style clicked (Wolf Table not available)');
                                 }
                             }}
                         >
                             Add Style
+                        </button>
+                        <button 
+                            className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                            onClick={() => {
+                                if (tableInstanceRef.current) {
+                                    // Add text wrapping style to a sample cell with long text
+                                    const wrapStyle = tableInstanceRef.current.addStyle({
+                                        wrap: true,
+                                        align: 'left',
+                                        fontSize: 10,
+                                        color: '#333'
+                                    });
+                                    tableInstanceRef.current.cell(8, 1, { 
+                                        value: 'This is a very long text that should wrap automatically when text wrapping is enabled for better readability', 
+                                        style: wrapStyle 
+                                    }).render();
+                                    console.log('Text wrapping applied to cell 8,1');
+                                } else {
+                                    console.log('Wrap text clicked (Wolf Table not available)');
+                                }
+                            }}
+                        >
+                            Wrap Text
+                        </button>
+                        <button 
+                            className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                            onClick={() => {
+                                if (tableInstanceRef.current) {
+                                    // Apply text wrapping to description columns
+                                    const wrapStyle = tableInstanceRef.current.addStyle({
+                                        wrap: true,
+                                        align: 'left',
+                                        fontSize: 9,
+                                        color: '#333',
+                                        verticalAlign: 'top'
+                                    });
+                                    
+                                    // Wrap text in description columns (column 2)
+                                    for (let row = 1; row <= 4; row++) {
+                                        const cell = tableInstanceRef.current.cell(row, 2);
+                                        if (cell && cell.value) {
+                                            tableInstanceRef.current.cell(row, 2, { 
+                                                value: cell.value, 
+                                                style: wrapStyle 
+                                            });
+                                        }
+                                    }
+                                    
+                                    tableInstanceRef.current.render();
+                                    console.log('Text wrapping applied to description columns');
+                                } else {
+                                    console.log('Wrap descriptions clicked (Wolf Table not available)');
+                                }
+                            }}
+                        >
+                            Wrap Descriptions
                         </button>
                     </div>
                 </div>
@@ -604,19 +606,30 @@ const table = WolfTable.create(
 )
 .freeze('D5')
 .merge('F10:G11')
-.addBorder('E8:L12', 'all', 'medium', '#21ba45')
 .data({
-  styles: [
-    { bold: true, color: '#21ba45', align: 'center' }
-  ],
+  styles: [],
   cells: [
-    [0, 0, 'Company'],
-    [1, 1, 'Revenue'],
-    [2, 2, { value: 'Formula', style: 0 }],
+    [0, 0, 'YOUR SEARCH REQUEST'],
+    [0, 1, 'COLUMN NAME'],
+    [1, 0, 'Entity to Research - Replace each placeholder...'],
+    [2, 0, 'Prompt Details'],
     [9, 5, { value: '', formula: '=sum(A1:A10)' }],
   ],
 })
-.render();`}</pre>
+.render();
+
+// Add text wrapping functionality
+const wrapStyle = table.addStyle({
+  wrap: true,
+  align: 'left', 
+  fontSize: 10,
+  verticalAlign: 'top'
+});
+
+table.cell(1, 2, { 
+  value: 'Long text that will wrap automatically...', 
+  style: wrapStyle 
+}).render();`}</pre>
                     </div>
                 </div>
             </div>

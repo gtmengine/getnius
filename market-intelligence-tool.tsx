@@ -10,6 +10,7 @@ import ActionScreen from "./action-screen"
 import SettingsScreen from "./settings-screen"
 import SpreadsheetScreen from "./spreadsheet-screen"
 import EnhancedSpreadsheetScreen from "./enhanced-spreadsheet-screen"
+import Spreadsheet2Screen from "./components/spreadsheet2-screen"
 import Test2Screen from "./components/test2-screen"
 import { EnhancedSearchScreen } from "./components/enhanced-search-screen"
 import { Button } from "@/components/ui/button"
@@ -442,27 +443,38 @@ const MarketIntelligenceTool = React.memo(() => {
       },
       buttonType: 'normal'
     },
-    {
-      id: "enhanced-spreadsheet",
-      name: "Enhanced Sheet",
-      icon: Sparkles,
-      component: EnhancedSpreadsheetScreen,
-      props: {
-        setCurrentScreen,
-        initialData: enrichedCompanies
-      },
-      buttonType: 'normal'
-    },
-    {
-      id: "test2",
-      name: "Test 2",
-      icon: Grid3x3,
-      component: Test2Screen,
-      props: {
-        setCurrentScreen
-      },
-      buttonType: 'normal'
-    },
+        {
+            id: "enhanced-spreadsheet",
+            name: "Enhanced Sheet",
+            icon: Sparkles,
+            component: EnhancedSpreadsheetScreen,
+            props: {
+                setCurrentScreen,
+                initialData: enrichedCompanies
+            },
+            buttonType: 'normal'
+        },
+        {
+            id: "spreadsheet2",
+            name: "Spreadsheet 2",
+            icon: Grid3x3,
+            component: Spreadsheet2Screen,
+            props: {
+                setCurrentScreen,
+                initialData: enrichedCompanies
+            },
+            buttonType: 'normal'
+        },
+        {
+            id: "test2",
+            name: "Test 2",
+            icon: Grid3x3,
+            component: Test2Screen,
+            props: {
+                setCurrentScreen
+            },
+            buttonType: 'normal'
+        },
     {
       id: "settings",
       name: "Settings",
