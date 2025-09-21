@@ -1,6 +1,14 @@
 import React, { useRef, useEffect } from "react";
 import { ArrowLeft, Grid3x3, Share, MessageSquare, Download, Upload } from "lucide-react";
 
+// Import Wolf Table - dynamic import to avoid SSR issues
+let WolfTable: any = null;
+if (typeof window !== 'undefined') {
+  import('@wolf-table/table').then((module) => {
+    WolfTable = module.default;
+  });
+}
+
 interface Test2ScreenProps {
     setCurrentScreen: (screen: string) => void;
 }
@@ -13,13 +21,32 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
         // Initialize Wolf Table when component mounts
         const initTable = async () => {
             try {
-                // Import Wolf Table dynamically (since it's not installed yet)
-                // For now, we'll create a mock implementation
                 console.log('Initializing Wolf Table...');
                 
-                if (tableRef.current) {
-                    // Create a basic table structure to simulate Wolf Table
-                    createMockTable();
+                if (tableRef.current && typeof window !== 'undefined') {
+                    // Import Wolf Table CSS
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = 'https://unpkg.com/@wolf-table/table/dist/table.min.css';
+                    document.head.appendChild(link);
+
+                    // Wait for Wolf Table to load
+                    let attempts = 0;
+                    const maxAttempts = 50;
+                    
+                    const tryCreateTable = () => {
+                        if (WolfTable && tableRef.current) {
+                            createRealWolfTable();
+                        } else if (attempts < maxAttempts) {
+                            attempts++;
+                            setTimeout(tryCreateTable, 100);
+                        } else {
+                            console.log('Wolf Table not available, using mock...');
+                            createMockTable();
+                        }
+                    };
+                    
+                    tryCreateTable();
                 }
             } catch (error) {
                 console.error('Failed to initialize Wolf Table:', error);
@@ -32,10 +59,100 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
         return () => {
             // Cleanup table instance
             if (tableInstanceRef.current) {
-                // tableInstanceRef.current.destroy?.();
+                try {
+                    // tableInstanceRef.current.destroy?.();
+                } catch (e) {
+                    console.log('Cleanup completed');
+                }
             }
         };
     }, []);
+
+    const createRealWolfTable = () => {
+        if (!tableRef.current || !WolfTable) return;
+
+        try {
+            console.log('Creating real Wolf Table...');
+            
+            // Clear the container and create table element
+            tableRef.current.innerHTML = '';
+            const tableElement = document.createElement('div');
+            tableElement.id = 'wolf-table-container';
+            tableElement.style.width = '100%';
+            tableElement.style.height = '500px';
+            tableRef.current.appendChild(tableElement);
+
+            // Create Wolf Table instance exactly as in your code
+            const table = WolfTable.create(
+                '#wolf-table-container',
+                () => 1200, // width
+                () => 500,  // height
+                {
+                    scrollable: true,
+                    resizable: true,
+                    selectable: true,
+                    editable: true,
+                    copyable: true,
+                }
+            )
+            .freeze('D5')
+            .merge('F10:G11')
+            .merge('I10:K11')
+            .addBorder('E8:L12', 'all', 'medium', '#21ba45')
+            .formulaParser((v: string) => `${v}-formula`)
+            .data({
+                styles: [
+                    { 
+                        bold: true, 
+                        strikethrough: true, 
+                        color: '#21ba45', 
+                        italic: true, 
+                        align: 'center', 
+                        fontSize: 12 
+                    },
+                ],
+                cells: [
+                    [0, 0, 'Company'],
+                    [0, 1, 'Revenue'],
+                    [0, 2, 'Employees'],
+                    [0, 3, 'Industry'],
+                    [1, 0, 'OpenAI'],
+                    [1, 1, '$1.3B'],
+                    [1, 2, '500+'],
+                    [1, 3, 'AI/ML'],
+                    [2, 0, 'Anthropic'],
+                    [2, 1, '$750M'],
+                    [2, 2, '150+'],
+                    [2, 3, 'AI Safety'],
+                    [2, 6, { value: 'Formula Cell', style: 0 }],
+                    [9, 5, { value: '', formula: '=sum(A1:A10)' }],
+                ],
+            })
+            .render();
+
+            // Add custom style
+            const styleIndex = table.addStyle({
+                bold: true,
+                italic: true,
+                underline: true,
+                color: '#1b1c1d',
+            });
+
+            // Set a styled cell
+            table.cell(2, 2, { value: 'Styled Cell', style: styleIndex }).render();
+
+            // Log cell info
+            console.log('Wolf Table cell[2,2]:', table.cell(2, 2));
+
+            // Store table instance
+            tableInstanceRef.current = table;
+
+            console.log('✅ Real Wolf Table created successfully!');
+        } catch (error) {
+            console.error('Failed to create real Wolf Table:', error);
+            createMockTable();
+        }
+    };
 
     const createMockTable = () => {
         if (!tableRef.current) return;
@@ -281,10 +398,17 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
 
             {/* Wolf Table Implementation Info */}
             <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
-                <div className="text-sm text-gray-600">
-                    <strong>Implementation Details:</strong> This screen demonstrates Wolf Table integration. 
-                    The table below simulates the canvas-based rendering with features like cell merging, 
-                    borders, formulas, and advanced styling capabilities.
+                <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-600">
+                        <strong>Implementation Details:</strong> This screen uses the real Wolf Table library 
+                        with canvas-based rendering, cell merging, borders, formulas, and advanced styling.
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${WolfTable ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                        <span className="text-xs text-gray-600">
+                            {WolfTable ? 'Real Wolf Table Loaded' : 'Loading Wolf Table...'}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -309,28 +433,83 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
                     {/* Table Actions */}
                     <div className="mt-4 flex gap-2">
                         <button 
-                            onClick={createMockTable}
+                            onClick={() => {
+                                if (WolfTable && tableInstanceRef.current) {
+                                    createRealWolfTable();
+                                } else {
+                                    createMockTable();
+                                }
+                            }}
                             className="px-3 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
                         >
                             Refresh Table
                         </button>
                         <button 
                             className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
-                            onClick={() => console.log('Add formula clicked')}
+                            onClick={() => {
+                                if (tableInstanceRef.current) {
+                                    // Add a formula to cell
+                                    tableInstanceRef.current.cell(3, 4, { 
+                                        value: '', 
+                                        formula: '=sum(B1:B3)' 
+                                    }).render();
+                                    console.log('Formula added to cell D5');
+                                } else {
+                                    console.log('Add formula clicked (Wolf Table not available)');
+                                }
+                            }}
                         >
                             Add Formula
                         </button>
                         <button 
                             className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
-                            onClick={() => console.log('Merge cells clicked')}
+                            onClick={() => {
+                                if (tableInstanceRef.current) {
+                                    // Merge some cells
+                                    tableInstanceRef.current.merge('A6:B7').render();
+                                    console.log('Merged cells A6:B7');
+                                } else {
+                                    console.log('Merge cells clicked (Wolf Table not available)');
+                                }
+                            }}
                         >
                             Merge Cells
                         </button>
                         <button 
                             className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
-                            onClick={() => console.log('Add border clicked')}
+                            onClick={() => {
+                                if (tableInstanceRef.current) {
+                                    // Add border to range
+                                    tableInstanceRef.current.addBorder('A1:D4', 'all', 'thick', '#e74c3c').render();
+                                    console.log('Border added to A1:D4');
+                                } else {
+                                    console.log('Add border clicked (Wolf Table not available)');
+                                }
+                            }}
                         >
                             Add Border
+                        </button>
+                        <button 
+                            className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                            onClick={() => {
+                                if (tableInstanceRef.current) {
+                                    // Add styled cell
+                                    const style = tableInstanceRef.current.addStyle({
+                                        bold: true,
+                                        backgroundColor: '#f39c12',
+                                        color: '#fff'
+                                    });
+                                    tableInstanceRef.current.cell(4, 1, { 
+                                        value: 'Highlighted', 
+                                        style 
+                                    }).render();
+                                    console.log('Styled cell added');
+                                } else {
+                                    console.log('Add style clicked (Wolf Table not available)');
+                                }
+                            }}
+                        >
+                            Add Style
                         </button>
                     </div>
                 </div>
