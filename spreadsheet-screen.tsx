@@ -31,27 +31,6 @@ interface Cell {
     col: number;
     isSelected: boolean;
     isEditing: boolean;
-    formula?: string;
-    style?: CellStyle;
-    type?: 'text' | 'number' | 'formula' | 'date';
-    validation?: CellValidation;
-}
-
-interface CellStyle {
-    backgroundColor?: string;
-    color?: string;
-    fontSize?: number;
-    fontWeight?: 'normal' | 'bold';
-    textAlign?: 'left' | 'center' | 'right';
-    borderColor?: string;
-    borderWidth?: number;
-}
-
-interface CellValidation {
-    required?: boolean;
-    pattern?: RegExp;
-    minLength?: number;
-    maxLength?: number;
 }
 
 interface SpreadsheetScreenProps {
@@ -63,26 +42,13 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     setCurrentScreen, 
     initialData = [] 
 }) => {
-    // Enhanced state management inspired by wolf-table
-    const [cells, setCells] = useState<Map<string, Cell>>(new Map());
+    const [cells, setCells] = useState<Cell[]>([]);
     const [selectedCell, setSelectedCell] = useState<string | null>(null);
     const [editingCell, setEditingCell] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
     const [rows, setRows] = useState(20);
-    const [cols, setCols] = useState(12);
+    const [cols, setCols] = useState(12); // Increased to accommodate more company data columns
     const inputRef = useRef<HTMLInputElement>(null);
-    
-    // Performance optimization: viewport tracking
-    const [viewport, setViewport] = useState({ 
-        startRow: 0, 
-        endRow: 20, 
-        startCol: 0, 
-        endCol: 12 
-    });
-    
-    // Undo/Redo state management like wolf-table
-    const [history, setHistory] = useState<Array<{ action: string, data: any, timestamp: number }>>([]);
-    const [historyIndex, setHistoryIndex] = useState(-1);
 
     // New state for column suggestions and menus
     const [columnSuggestions, setColumnSuggestions] = useState<any[]>([]);
@@ -114,9 +80,9 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         return result;
     }, []);
 
-    // Initialize cells using Map for better performance (wolf-table approach)
+    // Initialize cells
     useEffect(() => {
-        const initialCells = new Map<string, Cell>();
+        const initialCells: Cell[] = [];
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
                 const cellId = `${getColumnHeader(col)}${row + 1}`;
@@ -127,14 +93,13 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                     value = initialData[row][col].toString();
                 }
                 
-                initialCells.set(cellId, {
+                initialCells.push({
                     id: cellId,
                     value,
                     row,
                     col,
                     isSelected: false,
-                    isEditing: false,
-                    type: 'text'
+                    isEditing: false
                 });
             }
         }
@@ -161,31 +126,13 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         setTimeout(() => inputRef.current?.focus(), 0);
     }, [cells]);
 
-    // Handle cell value change - optimized with Map (wolf-table approach)
+    // Handle cell value change
     const handleCellValueChange = useCallback((cellId: string, newValue: string) => {
-        setCells(prev => {
-            const newCells = new Map(prev);
-            const existingCell = newCells.get(cellId);
-            if (existingCell) {
-                newCells.set(cellId, { ...existingCell, value: newValue });
-            }
-            return newCells;
-        });
-        
-        // Add to history for undo/redo (wolf-table feature)
-        setHistory(prev => {
-            const newHistory = prev.slice(0, historyIndex + 1);
-            newHistory.push({ 
-                action: 'cellChange', 
-                data: { cellId, oldValue: cells.get(cellId)?.value || '', newValue }, 
-                timestamp: Date.now() 
-            });
-            return newHistory.slice(-50); // Keep last 50 operations
-        });
-        setHistoryIndex(prev => Math.min(prev + 1, 49));
-        
+        setCells(prev => prev.map(cell => 
+            cell.id === cellId ? { ...cell, value: newValue } : cell
+        ));
         setEditValue(newValue);
-    }, [historyIndex, cells]);
+    }, []);
 
     // Handle edit confirm
     const handleEditConfirm = useCallback(() => {
@@ -236,25 +183,6 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, []);
 
-    // Handle formula calculations
-    const handleFormulaCalculation = useCallback((formula: string) => {
-        try {
-            // Simple formula parsing - extend as needed
-            if (formula.includes('SUM')) {
-                const match = formula.match(/SUM\(([A-Z]+\d+):([A-Z]+\d+)\)/);
-                if (match) {
-                    // Calculate sum of range
-                    const result = calculateSumRange(match[1], match[2]);
-                    if (selectedCell) {
-                        handleCellValueChange(selectedCell, result.toString());
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Formula calculation error:', error);
-        }
-    }, [selectedCell, handleCellValueChange]);
-
     // Populate spreadsheet with Exa results in specific format: Company | Description | Webpage | Industry
     const populateSpreadsheetWithExaResults = useCallback((results: any[]) => {
         console.log('🎯 PopulateSpreadsheetWithExaResults called with:', results);
@@ -304,6 +232,25 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         setQueryResults(results);
         console.log('✅ Population complete, results stored');
     }, [getColumnHeader, handleCellValueChange, rows]);
+
+    // Handle formula calculations
+    const handleFormulaCalculation = useCallback((formula: string) => {
+        try {
+            // Simple formula parsing - extend as needed
+            if (formula.includes('SUM')) {
+                const match = formula.match(/SUM\(([A-Z]+\d+):([A-Z]+\d+)\)/);
+                if (match) {
+                    // Calculate sum of range
+                    const result = calculateSumRange(match[1], match[2]);
+                    if (selectedCell) {
+                        handleCellValueChange(selectedCell, result.toString());
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Formula calculation error:', error);
+        }
+    }, [selectedCell, handleCellValueChange]);
 
     // Handle search queries - using Exa.ai API specifically
     const handleSearchQuery = useCallback(async (query: string) => {
@@ -392,66 +339,13 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, [selectedCell, handleCellValueChange, populateSpreadsheetWithExaResults]);
 
-    // Undo/Redo functionality inspired by wolf-table
-    const handleUndo = useCallback(() => {
-        if (historyIndex >= 0) {
-            const operation = history[historyIndex];
-            if (operation.action === 'cellChange') {
-                const { cellId, oldValue } = operation.data;
-                setCells(prev => {
-                    const newCells = new Map(prev);
-                    const cell = newCells.get(cellId);
-                    if (cell) {
-                        newCells.set(cellId, { ...cell, value: oldValue });
-                    }
-                    return newCells;
-                });
-            }
-            setHistoryIndex(prev => prev - 1);
-        }
-    }, [history, historyIndex]);
-
-    const handleRedo = useCallback(() => {
-        if (historyIndex < history.length - 1) {
-            const operation = history[historyIndex + 1];
-            if (operation.action === 'cellChange') {
-                const { cellId, newValue } = operation.data;
-                setCells(prev => {
-                    const newCells = new Map(prev);
-                    const cell = newCells.get(cellId);
-                    if (cell) {
-                        newCells.set(cellId, { ...cell, value: newValue });
-                    }
-                    return newCells;
-                });
-            }
-            setHistoryIndex(prev => prev + 1);
-        }
-    }, [history, historyIndex]);
-
-    // Keyboard shortcuts for undo/redo (wolf-table feature)
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
-                e.preventDefault();
-                handleUndo();
-            } else if (e.ctrlKey && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-                e.preventDefault();
-                handleRedo();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleUndo, handleRedo]);
-
     // Populate spreadsheet with search results
     const populateSpreadsheetWithResults = useCallback((results: any[]) => {
         if (!results.length) return;
 
-        // Find the next empty row - optimized for Map
+        // Find the next empty row
         let startRow = 0;
-        const usedCells = Array.from(cells.values()).filter(cell => cell.value.trim() !== '');
+        const usedCells = cells.filter(cell => cell.value.trim() !== '');
         if (usedCells.length > 0) {
             startRow = Math.max(...usedCells.map(cell => cell.row)) + 2; // Leave one empty row
         }
@@ -748,11 +642,9 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     }, [addColumns]);
 
     // Get cell by position
-    // Optimized cell lookup using Map (wolf-table inspired)
     const getCellByPosition = useCallback((row: number, col: number) => {
-        const cellId = `${getColumnHeader(col)}${row + 1}`;
-        return cells.get(cellId);
-    }, [cells, getColumnHeader]);
+        return cells.find(cell => cell.row === row && cell.col === col);
+    }, [cells]);
 
     return (
         <div className="h-screen bg-white flex flex-col">
@@ -845,20 +737,10 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 
                 <div className="w-px h-6 bg-gray-300 mx-2" />
                 
-                <button 
-                    onClick={handleUndo}
-                    disabled={historyIndex < 0}
-                    className={`p-1 hover:bg-gray-200 rounded ${historyIndex < 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title="Undo last change"
-                >
+                <button className="p-1 hover:bg-gray-200 rounded">
                     <Undo className="w-4 h-4 text-gray-600" />
                 </button>
-                <button 
-                    onClick={handleRedo}
-                    disabled={historyIndex >= history.length - 1}
-                    className={`p-1 hover:bg-gray-200 rounded ${historyIndex >= history.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title="Redo last change"
-                >
+                <button className="p-1 hover:bg-gray-200 rounded">
                     <Redo className="w-4 h-4 text-gray-600" />
                 </button>
                 
@@ -997,19 +879,19 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             </div>
 
             {/* Spreadsheet */}
-            <div className="flex-1 overflow-auto bg-white">
-                <div className="relative min-w-full">
+            <div className="flex-1 overflow-auto">
+                <div className="relative">
                     {/* Column Headers */}
-                    <div className="sticky top-0 z-10 bg-gray-100 border-b-2 border-gray-300 shadow-sm">
+                    <div className="sticky top-0 z-10 bg-gray-100 border-b border-gray-300">
                         <div className="flex">
                             {/* Corner cell */}
-                            <div className="w-12 h-10 border-r border-gray-300 bg-gray-200"></div>
+                            <div className="w-12 h-8 border-r border-gray-300 bg-gray-200"></div>
                             
                             {/* Column headers with context menu */}
                             {Array.from({ length: cols }, (_, index) => (
                                 <div
                                     key={index}
-                                    className="relative w-32 h-10 flex items-center justify-center border-r border-gray-300 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 cursor-pointer group"
+                                    className="relative w-24 h-8 flex items-center justify-center border-r border-gray-300 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 cursor-pointer group"
                                     onContextMenu={(e) => {
                                         e.preventDefault();
                                         setSelectedColumn(index);
@@ -1042,16 +924,16 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                             <div className="relative">
                                 <button
                                     onClick={() => getColumnSuggestions()}
-                                    className="w-32 h-10 flex items-center justify-center border-r border-gray-300 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-200 transition-colors"
+                                    className="w-32 h-8 flex items-center justify-center border-r border-gray-300 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-200 transition-colors"
                                     title="Add column with AI suggestions"
                                 >
-                                    <Plus className="w-4 h-4 mr-1" />
+                                    <Plus className="w-3 h-3 mr-1" />
                                     Add column
                                 </button>
                                 
                                 {/* AI Suggestions Dropdown */}
                                 {showSuggestions && (
-                                    <div className="absolute top-10 left-0 w-80 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-96 overflow-y-auto">
+                                    <div className="absolute top-8 left-0 w-80 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-96 overflow-y-auto">
                                         <div className="p-3 border-b border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <h4 className="text-sm font-medium text-gray-900">📊 AI Column Suggestions</h4>
@@ -1116,7 +998,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                     {Array.from({ length: rows }, (_, rowIndex) => (
                         <div key={rowIndex} className="flex">
                             {/* Row header */}
-                            <div className="w-12 h-10 flex items-center justify-center border-r border-b border-gray-300 text-sm font-medium text-gray-700 bg-gray-100">
+                            <div className="w-12 h-8 flex items-center justify-center border-r border-b border-gray-300 text-xs font-medium text-gray-700 bg-gray-100">
                                 {rowIndex + 1}
                             </div>
                             
@@ -1130,7 +1012,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                 return (
                                     <div
                                         key={colIndex}
-                                        className={`w-32 h-10 border-r border-b border-gray-300 relative ${
+                                        className={`w-24 h-8 border-r border-b border-gray-300 relative ${
                                             isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
                                         }`}
                                         onClick={() => handleCellClick(cellId)}
@@ -1144,10 +1026,10 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                                 onChange={(e) => setEditValue(e.target.value)}
                                                 onKeyDown={handleKeyPress}
                                                 onBlur={handleEditConfirm}
-                                                className="w-full h-full px-2 text-sm border-none outline-none bg-white"
+                                                className="w-full h-full px-1 text-xs border-none outline-none bg-white"
                                             />
                                         ) : (
-                                            <div className="w-full h-full px-2 flex items-center text-sm text-gray-900 overflow-hidden whitespace-nowrap">
+                                            <div className="w-full h-full px-1 flex items-center text-xs text-gray-900 overflow-hidden">
                                                 {cell?.value || ""}
                                             </div>
                                         )}
@@ -1156,7 +1038,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                             })}
                             
                             {/* Empty cell to match add column button */}
-                            <div className="w-32 h-10 border-r border-b border-gray-300 bg-gray-50"></div>
+                            <div className="w-32 h-8 border-r border-b border-gray-300 bg-gray-50"></div>
                         </div>
                     ))}
                 </div>
