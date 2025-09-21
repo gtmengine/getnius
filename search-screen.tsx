@@ -81,7 +81,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
 }) => {
   // State for dynamic link input functionality
   const [linkFields, setLinkFields] = React.useState<{ id: string, value: string }[]>([
-    { id: crypto.randomUUID(), value: "" }
+    { id: "initial-field", value: "" }
   ]);
 
   // State for CSV parser functionality
@@ -103,7 +103,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
       // Auto-add new field if current one has value and is the last field
       const lastField = updated[updated.length - 1];
       if (lastField.value.trim() && lastField.id === fieldId) {
-        updated.push({ id: crypto.randomUUID(), value: "" });
+        updated.push({ id: `field-${Date.now()}-${Math.random()}`, value: "" });
       }
 
       return updated;
@@ -115,7 +115,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({
     setLinkFields(prev => {
       // Always keep at least one field
       if (prev.length <= 1) {
-        return [{ id: crypto.randomUUID(), value: "" }];
+        return [{ id: "initial-field", value: "" }];
       }
       return prev.filter(field => field.id !== fieldId);
     });
