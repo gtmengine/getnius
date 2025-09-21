@@ -69,12 +69,6 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     const [queryResults, setQueryResults] = useState<any[]>([]);
     const [queryHistory, setQueryHistory] = useState<string[]>([]);
 
-    // Copy/Paste state
-    const [copiedCell, setCopiedCell] = useState<{cellId: string, value: string} | null>(null);
-    const [showContextMenu, setShowContextMenu] = useState(false);
-    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-    const [contextMenuCell, setContextMenuCell] = useState<string | null>(null);
-
     // Column headers (A, B, C, etc.)
     const getColumnHeader = useCallback((index: number): string => {
         let result = '';
@@ -112,7 +106,6 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         setCells(initialCells);
     }, [rows, cols, initialData]);
 
-
     // Handle cell click
     const handleCellClick = useCallback((cellId: string) => {
         setSelectedCell(cellId);
@@ -141,104 +134,6 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         setEditValue(newValue);
     }, []);
 
-    // Get cell value by ID
-    const getCellValue = useCallback((cellId: string) => {
-        const cell = cells.find(c => c.id === cellId);
-        return cell ? cell.value : "";
-    }, [cells]);
-
-    // Copy cell functionality
-    const copyCell = useCallback((cellId: string) => {
-        const cellValue = getCellValue(cellId);
-        setCopiedCell({ cellId, value: cellValue });
-        
-        // Copy to system clipboard as well
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(cellValue).catch(err => {
-                console.warn('Could not copy to clipboard:', err);
-            });
-        }
-        
-        console.log(`✅ Copied cell ${cellId}: "${cellValue}"`);
-        
-        // Visual feedback - you could add a toast notification here
-        if (typeof window !== 'undefined') {
-            // Simple feedback via console for now, could be enhanced with toast
-            console.log(`📋 Cell ${cellId} copied to clipboard`);
-        }
-    }, [getCellValue]);
-
-    // Paste cell functionality
-    const pasteCell = useCallback((targetCellId: string) => {
-        if (copiedCell) {
-            handleCellValueChange(targetCellId, copiedCell.value);
-            console.log(`✅ Pasted "${copiedCell.value}" from ${copiedCell.cellId} to cell ${targetCellId}`);
-        } else {
-            // Try to paste from system clipboard
-            if (navigator.clipboard && navigator.clipboard.readText) {
-                navigator.clipboard.readText().then(text => {
-                    if (text) {
-                        handleCellValueChange(targetCellId, text);
-                        console.log(`✅ Pasted from system clipboard: "${text}" to cell ${targetCellId}`);
-                    }
-                }).catch(err => {
-                    console.warn('Could not read from clipboard:', err);
-                });
-            }
-        }
-    }, [copiedCell, handleCellValueChange]);
-
-    // Handle right-click context menu
-    const handleCellRightClick = useCallback((e: React.MouseEvent, cellId: string) => {
-        e.preventDefault();
-        setContextMenuCell(cellId);
-        setContextMenuPosition({ x: e.clientX, y: e.clientY });
-        setShowContextMenu(true);
-    }, []);
-
-    // Close context menu
-    const closeContextMenu = useCallback(() => {
-        setShowContextMenu(false);
-        setContextMenuCell(null);
-    }, []);
-
-    // Global keyboard shortcuts and click handlers
-    useEffect(() => {
-        const handleGlobalKeyDown = (e: KeyboardEvent) => {
-            // Only handle global shortcuts when not editing a cell
-            if (!editingCell && (e.ctrlKey || e.metaKey)) {
-                if (e.key === 'c' || e.key === 'C') {
-                    if (selectedCell) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('Global Ctrl+C triggered for cell:', selectedCell);
-                        copyCell(selectedCell);
-                    }
-                } else if (e.key === 'v' || e.key === 'V') {
-                    if (selectedCell) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('Global Ctrl+V triggered for cell:', selectedCell);
-                        pasteCell(selectedCell);
-                    }
-                }
-            }
-        };
-
-        const handleGlobalClick = () => {
-            closeContextMenu();
-        };
-
-        // Add keyboard event listener with capture to ensure it gets called
-        document.addEventListener('keydown', handleGlobalKeyDown, true);
-        document.addEventListener('click', handleGlobalClick);
-
-        return () => {
-            document.removeEventListener('keydown', handleGlobalKeyDown, true);
-            document.removeEventListener('click', handleGlobalClick);
-        };
-    }, [selectedCell, editingCell, copyCell, pasteCell, closeContextMenu]);
-
     // Handle edit confirm
     const handleEditConfirm = useCallback(() => {
         if (editingCell) {
@@ -247,7 +142,48 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, [editingCell, editValue, handleCellValueChange]);
 
-    // Handle formula calculations (moved before handleQuerySubmit)
+    // Handle key press in cell
+    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            // Check if this is a query (starts with natural language or specific patterns)
+            if (editValue && !editValue.startsWith('=') && editValue.length > 3) {
+                handleQuerySubmit(editValue);
+            } else {
+            handleEditConfirm();
+            }
+        } else if (e.key === 'Escape') {
+            setEditingCell(null);
+        }
+    }, [handleEditConfirm, editValue]);
+
+    // Handle query submission
+    const handleQuerySubmit = useCallback(async (query: string) => {
+        if (!query.trim()) return;
+
+        setIsProcessingQuery(true);
+        setQueryHistory(prev => [query, ...prev.slice(0, 9)]); // Keep last 10 queries
+
+        try {
+            // Determine query type
+            if (query.startsWith('=')) {
+                // Formula calculation
+                handleFormulaCalculation(query);
+            } else if (query.toLowerCase().includes('find') || query.toLowerCase().includes('search')) {
+                // Search query - integrate with existing search APIs
+                await handleSearchQuery(query);
+            } else {
+                // Direct value or company name
+                await handleDirectQuery(query);
+            }
+        } catch (error) {
+            console.error('Query processing error:', error);
+            // Show error in a cell or notification
+        } finally {
+            setIsProcessingQuery(false);
+        }
+    }, []);
+
+    // Handle formula calculations
     const handleFormulaCalculation = useCallback((formula: string) => {
         try {
             // Simple formula parsing - extend as needed
@@ -266,242 +202,92 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, [selectedCell, handleCellValueChange]);
 
-    // Populate spreadsheet with Exa results in specific format: Company | Description | Webpage | Industry (moved before handleSearchQuery)
-    const populateSpreadsheetWithExaResults = useCallback((results: any[]) => {
-        console.log('populateSpreadsheetWithExaResults called with:', results);
-        if (!results.length) {
-            console.log('No results to populate');
-            return;
-        }
-
-        // Clear existing data and set headers in row 1
-        const headers = ['Company', 'Description', 'Webpage', 'Industry'];
-        console.log('Setting headers:', headers);
-        headers.forEach((header, colIndex) => {
-            const cellId = `${getColumnHeader(colIndex)}1`;
-            console.log(`Setting header ${header} in cell ${cellId}`);
-            handleCellValueChange(cellId, header);
-        });
-
-        // Populate data starting from row 2
-        results.forEach((result, index) => {
-            const row = index + 2; // Start from row 2 (row 1 is headers)
-            const data = [
-                result.company || 'Unknown Company',
-                result.description || 'No description available',
-                result.webpage || 'No website',
-                result.industry || 'Unknown Industry'
-            ];
-
-            data.forEach((value, colIndex) => {
-                const cellId = `${getColumnHeader(colIndex)}${row}`;
-                handleCellValueChange(cellId, value.toString());
-            });
-        });
-
-        // Ensure we have enough rows
-        const neededRows = results.length + 2; // +1 for header, +1 for buffer
-        if (neededRows > rows) {
-            setRows(neededRows);
-        }
-
-        setQueryResults(results);
-    }, [getColumnHeader, handleCellValueChange, rows]);
-
-    // Handle search queries - using mock data like search screen (moved before handleQuerySubmit)
+    // Handle search queries - using Exa.ai API specifically
     const handleSearchQuery = useCallback(async (query: string) => {
-        console.log('handleSearchQuery called with query:', query);
+        console.log('🔍 Starting search query:', query);
         try {
-            // Mock companies data similar to search screen
-            const mockCompanies = [
-                {
-                    name: "TechCorp",
-                    description: "Leading technology company specializing in cloud solutions and enterprise software",
-                    website: "https://techcorp.com",
-                    industry: "Technology"
-                },
-                {
-                    name: "InnovateLabs",
-                    description: "AI-powered research and development company focused on machine learning solutions",
-                    website: "https://innovatelabs.io",
-                    industry: "AI"
-                },
-                {
-                    name: "DataFlow Systems",
-                    description: "Big data analytics platform helping businesses make data-driven decisions",
-                    website: "https://dataflow.com",
-                    industry: "Analytics"
-                },
-                {
-                    name: "CloudBridge",
-                    description: "Cloud infrastructure provider offering scalable computing solutions",
-                    website: "https://cloudbridge.net",
-                    industry: "Cloud Computing"
-                },
-                {
-                    name: "SecureNet",
-                    description: "Cybersecurity firm providing advanced threat detection and prevention services",
-                    website: "https://securenet.com",
-                    industry: "Cybersecurity"
-                },
-                {
-                    name: "GreenTech Solutions",
-                    description: "Sustainable technology company developing renewable energy management systems",
-                    website: "https://greentech.com",
-                    industry: "CleanTech"
-                },
-                {
-                    name: "HealthAI",
-                    description: "Healthcare technology startup using AI for medical diagnosis and treatment optimization",
-                    website: "https://healthai.com",
-                    industry: "HealthTech"
-                },
-                {
-                    name: "FinanceFlow",
-                    description: "Financial technology platform providing digital banking and payment solutions",
-                    website: "https://financeflow.com",
-                    industry: "FinTech"
+            // Use Exa.ai API directly for better results
+            const response = await fetch('/api/search/exa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, numResults: 10 })
+            });
+            
+            console.log('📡 API response status:', response.status);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📊 API response data:', data);
+                
+                if (data.companies && data.companies.length > 0) {
+                    // Format results for spreadsheet with specific columns
+                    const formattedResults = data.companies.map((company: Company) => ({
+                        company: company.name,
+                        description: company.description,
+                        webpage: company.website,
+                        industry: company.industry || 'Unknown'
+                    }));
+                    
+                    console.log('📋 Formatted results for spreadsheet:', formattedResults);
+                    populateSpreadsheetWithExaResults(formattedResults);
+                } else {
+                    console.log('❌ No companies found in response');
                 }
-            ];
-
-            // Filter companies based on query (simple matching)
-            const filteredCompanies = mockCompanies.filter(company => 
-                company.name.toLowerCase().includes(query.toLowerCase()) ||
-                company.description.toLowerCase().includes(query.toLowerCase()) ||
-                company.industry.toLowerCase().includes(query.toLowerCase())
-            );
-
-            // If no matches, return all companies
-            const companies = filteredCompanies.length > 0 ? filteredCompanies : mockCompanies;
-
-            // Format results for spreadsheet with specific columns
-            const formattedResults = companies.slice(0, 10).map((company) => ({
-                company: company.name,
-                description: company.description,
-                webpage: company.website,
-                industry: company.industry
-            }));
-            
-            console.log('Formatted results:', formattedResults);
-            
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            console.log('About to call populateSpreadsheetWithExaResults');
-            populateSpreadsheetWithExaResults(formattedResults);
+            } else {
+                console.log('❌ API response not ok:', response.status);
+            }
         } catch (error) {
-            console.error('Search query error:', error);
+            console.error('🚨 Exa search query error:', error);
         }
     }, [populateSpreadsheetWithExaResults]);
 
-    // Handle query submission (moved up to avoid dependency issues)
-    const handleQuerySubmit = useCallback(async (query: string) => {
-        if (!query.trim()) return;
-
-        setIsProcessingQuery(true);
-        setQueryHistory(prev => [query, ...prev.slice(0, 9)]); // Keep last 10 queries
-
-        try {
-            // Determine query type
-            if (query.startsWith('=')) {
-                // Formula calculation
-                handleFormulaCalculation(query);
-            } else {
-                // All non-formula queries go to search to populate spreadsheet
-                await handleSearchQuery(query);
-            }
-        } catch (error) {
-            console.error('Query processing error:', error);
-            // Show error in a cell or notification
-        } finally {
-            setIsProcessingQuery(false);
-        }
-    }, [handleFormulaCalculation, handleSearchQuery]);
-
-    // Handle key press in cell (only for editing-specific keys)
-    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            // Check if this is a query (starts with natural language or specific patterns)
-            if (editValue && !editValue.startsWith('=') && editValue.length > 3) {
-                handleQuerySubmit(editValue);
-            } else {
-            handleEditConfirm();
-            }
-        } else if (e.key === 'Escape') {
-            setEditingCell(null);
-        }
-        // Note: Copy/paste is handled by global keyboard handler
-    }, [handleEditConfirm, editValue, handleQuerySubmit]);
-
     // Handle direct queries (company names, etc.)
     const handleDirectQuery = useCallback(async (query: string) => {
+        console.log('🎯 Direct query for:', query);
         try {
-            // Same mock data as search queries
-            const mockCompanies = [
-                {
-                    name: "TechCorp",
-                    description: "Leading technology company specializing in cloud solutions and enterprise software",
-                    website: "https://techcorp.com",
-                    industry: "Technology"
-                },
-                {
-                    name: "InnovateLabs",
-                    description: "AI-powered research and development company focused on machine learning solutions",
-                    website: "https://innovatelabs.io",
-                    industry: "AI"
-                },
-                {
-                    name: "DataFlow Systems",
-                    description: "Big data analytics platform helping businesses make data-driven decisions",
-                    website: "https://dataflow.com",
-                    industry: "Analytics"
-                },
-                {
-                    name: "CloudBridge",
-                    description: "Cloud infrastructure provider offering scalable computing solutions",
-                    website: "https://cloudbridge.net",
-                    industry: "Cloud Computing"
-                },
-                {
-                    name: "SecureNet",
-                    description: "Cybersecurity firm providing advanced threat detection and prevention services",
-                    website: "https://securenet.com",
-                    industry: "Cybersecurity"
+            // Use Exa API for direct company searches too
+            const response = await fetch('/api/search/exa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: `${query} company information`, numResults: 5 })
+            });
+
+            console.log('📡 Direct query API response status:', response.status);
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📊 Direct query API response data:', data);
+                
+                if (data.companies && data.companies.length > 0) {
+                    // Format results for spreadsheet
+                    const formattedResults = data.companies.map((company: Company) => ({
+                        company: company.name,
+                        description: company.description,
+                        webpage: company.website,
+                        industry: company.industry || 'Unknown'
+                    }));
+                    
+                    console.log('📋 Direct query formatted results:', formattedResults);
+                    populateSpreadsheetWithExaResults(formattedResults);
+                } else {
+                    console.log('📝 No companies found, setting value in selected cell:', selectedCell);
+                    // Just put the value in the selected cell
+                    if (selectedCell) {
+                        handleCellValueChange(selectedCell, query);
+                    }
                 }
-            ];
-
-            // Try to find exact or partial matches
-            const matchedCompanies = mockCompanies.filter(company => 
-                company.name.toLowerCase().includes(query.toLowerCase())
-            );
-
-            if (matchedCompanies.length > 0) {
-                // Format results for spreadsheet
-                const formattedResults = matchedCompanies.slice(0, 5).map((company) => ({
-                    company: company.name,
-                    description: company.description,
-                    webpage: company.website,
-                    industry: company.industry
-                }));
-                
-                // Simulate API delay
-                await new Promise(resolve => setTimeout(resolve, 300));
-                
-                populateSpreadsheetWithExaResults(formattedResults);
             } else {
-                // Just put the value in the selected cell
-                if (selectedCell) {
-                    handleCellValueChange(selectedCell, query);
-                }
+                console.log('❌ Direct query API response not ok:', response.status);
             }
         } catch (error) {
-            console.error('Direct query error:', error);
+            console.error('🚨 Direct query error:', error);
             // Fallback to just setting the value
             if (selectedCell) {
+                console.log('📝 Fallback: setting value in selected cell:', selectedCell);
                 handleCellValueChange(selectedCell, query);
             }
         }
-    }, [selectedCell, handleCellValueChange]);
+    }, [selectedCell, handleCellValueChange, populateSpreadsheetWithExaResults]);
 
     // Populate spreadsheet with search results
     const populateSpreadsheetWithResults = useCallback((results: any[]) => {
@@ -553,6 +339,56 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
         setQueryResults(results);
     }, [cells, rows, getColumnHeader, handleCellValueChange]);
+
+    // Populate spreadsheet with Exa results in specific format: Company | Description | Webpage | Industry
+    const populateSpreadsheetWithExaResults = useCallback((results: any[]) => {
+        console.log('🎯 PopulateSpreadsheetWithExaResults called with:', results);
+        
+        if (!results.length) {
+            console.log('❌ No results to populate');
+            return;
+        }
+
+        // Clear existing data and set headers in row 1
+        const headers = ['Company', 'Description', 'Webpage', 'Industry'];
+        console.log('📝 Setting headers:', headers);
+        
+        headers.forEach((header, colIndex) => {
+            const cellId = `${getColumnHeader(colIndex)}1`;
+            console.log(`📝 Setting header "${header}" in cell ${cellId}`);
+            handleCellValueChange(cellId, header);
+        });
+
+        // Populate data starting from row 2
+        results.forEach((result, index) => {
+            const row = index + 2; // Start from row 2 (row 1 is headers)
+            const data = [
+                result.company || 'Unknown Company',
+                result.description || 'No description available',
+                result.webpage || 'No website',
+                result.industry || 'Unknown Industry'
+            ];
+
+            console.log(`📝 Row ${row} data:`, data);
+
+            data.forEach((value, colIndex) => {
+                const cellId = `${getColumnHeader(colIndex)}${row}`;
+                console.log(`📝 Setting "${value}" in cell ${cellId}`);
+                handleCellValueChange(cellId, value.toString());
+            });
+        });
+
+        // Ensure we have enough rows
+        const neededRows = results.length + 2; // +1 for header, +1 for buffer
+        console.log(`📏 Current rows: ${rows}, needed: ${neededRows}`);
+        if (neededRows > rows) {
+            console.log(`📏 Expanding rows to ${neededRows}`);
+            setRows(neededRows);
+        }
+
+        setQueryResults(results);
+        console.log('✅ Population complete, results stored');
+    }, [getColumnHeader, handleCellValueChange, rows]);
 
     // Calculate sum of range (simple implementation)
     const calculateSumRange = useCallback((start: string, end: string): number => {
@@ -717,32 +553,42 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         setShowSuggestions(true);
         
         try {
-            // Mock suggestions that will trigger company searches
-            const mockSuggestions = [
-                { name: "AI companies", description: "Find artificial intelligence companies", type: "search", category: "industry", priority: "high" },
-                { name: "fintech startups", description: "Discover financial technology startups", type: "search", category: "industry", priority: "high" },
-                { name: "healthcare technology", description: "Search for healthcare tech companies", type: "search", category: "industry", priority: "medium" },
-                { name: "cloud computing", description: "Find cloud infrastructure companies", type: "search", category: "industry", priority: "medium" },
-                { name: "cybersecurity firms", description: "Discover cybersecurity companies", type: "search", category: "industry", priority: "high" },
-                { name: "green technology", description: "Find sustainable tech companies", type: "search", category: "industry", priority: "medium" },
-                { name: "data analytics", description: "Search for data analytics platforms", type: "search", category: "industry", priority: "medium" },
-                { name: "e-commerce platforms", description: "Find e-commerce technology companies", type: "search", category: "industry", priority: "low" }
-            ];
+            // Get existing column names
+            const existingColumns = Array.from({ length: cols }, (_, index) => getColumnHeader(index));
             
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // Analyze current data for context
+            const dataContext = cells
+                .filter(cell => cell.value)
+                .slice(0, 20)
+                .map(cell => cell.value)
+                .join(", ");
+                
+            const response = await fetch('/api/column-suggestions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    existingColumns,
+                    dataContext,
+                    industryHint: "Business/Market Research"
+                })
+            });
             
-            setColumnSuggestions(mockSuggestions);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            setColumnSuggestions(data.suggestions || []);
         } catch (error) {
             console.error('Failed to get column suggestions:', error);
-            // Fallback suggestions that will trigger company searches
+            // Fallback suggestions
             setColumnSuggestions([
-                { name: "AI companies", description: "Find artificial intelligence companies", type: "search", category: "industry", priority: "high" },
-                { name: "fintech startups", description: "Discover financial technology startups", type: "search", category: "industry", priority: "high" },
-                { name: "healthcare technology", description: "Search for healthcare tech companies", type: "search", category: "industry", priority: "medium" },
-                { name: "cloud computing", description: "Find cloud infrastructure companies", type: "search", category: "industry", priority: "medium" },
-                { name: "cybersecurity firms", description: "Discover cybersecurity companies", type: "search", category: "industry", priority: "high" },
-                { name: "green technology", description: "Find sustainable tech companies", type: "search", category: "industry", priority: "medium" }
+                { name: "CEO Name", description: "Name of the company's CEO", type: "text", category: "contact", priority: "high" },
+                { name: "Annual Revenue", description: "Company's yearly revenue in USD", type: "number", category: "financial", priority: "high" },
+                { name: "Employee Count", description: "Total number of employees", type: "number", category: "operational", priority: "high" },
+                { name: "LinkedIn URL", description: "Company's LinkedIn profile", type: "url", category: "social", priority: "medium" },
+                { name: "Industry", description: "Primary industry sector", type: "text", category: "market", priority: "high" },
+                { name: "Funding Status", description: "Current funding stage", type: "text", category: "financial", priority: "high" }
             ]);
         } finally {
             setLoadingSuggestions(false);
@@ -777,7 +623,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             // Show suggestions for the new columns
             if (suggestions.length > 0) {
                 console.log(`Added ${count} columns. Suggested headers:`, 
-                    suggestions.slice(0, count).map((s: any) => s.name).join(', '));
+                    suggestions.slice(0, count).map(s => s.name).join(', '));
             }
         } catch (error) {
             console.error('Failed to get suggestions, adding blank columns:', error);
@@ -787,26 +633,13 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     }, [cols, getColumnHeader, addMultipleColumns]);
 
     // Function to apply a suggestion
-    const applySuggestion = useCallback(async (suggestion: any) => {
+    const applySuggestion = useCallback((suggestion: any) => {
         addColumns(1);
         setShowSuggestions(false);
         
         // Log the suggestion for debugging
         console.log(`Added column: ${suggestion.name} - ${suggestion.description}`);
-        
-        // Trigger search with suggestion name to populate spreadsheet
-        if (suggestion.name) {
-            setIsProcessingQuery(true);
-            try {
-                // Use the same mock search functionality
-                await handleSearchQuery(suggestion.name);
-            } catch (error) {
-                console.error('Error applying suggestion search:', error);
-            } finally {
-                setIsProcessingQuery(false);
-            }
-        }
-    }, [addColumns, handleSearchQuery]);
+    }, [addColumns]);
 
     // Get cell by position
     const getCellByPosition = useCallback((row: number, col: number) => {
@@ -1047,30 +880,18 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
             {/* Spreadsheet */}
             <div className="flex-1 overflow-auto">
-                <div className="relative border border-gray-400" style={{ borderColor: '#9ca3af' }}>
+                <div className="relative">
                     {/* Column Headers */}
                     <div className="sticky top-0 z-10 bg-gray-100 border-b border-gray-300">
                         <div className="flex">
                             {/* Corner cell */}
-                            <div 
-                                className="w-12 h-8 border-r border-gray-400 bg-gray-300"
-                                style={{ 
-                                    borderRight: '1px solid #9ca3af',
-                                    borderBottom: '1px solid #9ca3af',
-                                    background: '#e5e7eb'
-                                }}
-                            ></div>
+                            <div className="w-12 h-8 border-r border-gray-300 bg-gray-200"></div>
                             
                             {/* Column headers with context menu */}
                             {Array.from({ length: cols }, (_, index) => (
                                 <div
                                     key={index}
-                                    className="relative w-24 h-8 flex items-center justify-center border-r border-gray-400 text-xs font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 cursor-pointer group"
-                                    style={{ 
-                                        borderRight: '1px solid #9ca3af',
-                                        borderBottom: '1px solid #9ca3af',
-                                        background: '#f3f4f6'
-                                    }}
+                                    className="relative w-24 h-8 flex items-center justify-center border-r border-gray-300 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 cursor-pointer group"
                                     onContextMenu={(e) => {
                                         e.preventDefault();
                                         setSelectedColumn(index);
@@ -1177,14 +998,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                     {Array.from({ length: rows }, (_, rowIndex) => (
                         <div key={rowIndex} className="flex">
                             {/* Row header */}
-                            <div 
-                                className="w-12 h-8 flex items-center justify-center border-r border-b border-gray-400 text-xs font-semibold text-gray-700 bg-gray-200"
-                                style={{ 
-                                    borderRight: '1px solid #9ca3af',
-                                    borderBottom: '1px solid #d1d5db',
-                                    background: '#f3f4f6'
-                                }}
-                            >
+                            <div className="w-12 h-8 flex items-center justify-center border-r border-b border-gray-300 text-xs font-medium text-gray-700 bg-gray-100">
                                 {rowIndex + 1}
                             </div>
                             
@@ -1198,18 +1012,11 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                 return (
                                     <div
                                         key={colIndex}
-                                        className={`w-24 h-8 border-r border-b border-gray-300 relative bg-white ${
-                                            isSelected ? 'ring-2 ring-blue-500 bg-blue-50 z-10' : 
-                                            copiedCell && copiedCell.cellId === cellId ? 'ring-2 ring-green-400 bg-green-50 z-10' :
-                                            'hover:bg-gray-50'
+                                        className={`w-24 h-8 border-r border-b border-gray-300 relative ${
+                                            isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
                                         }`}
-                                        style={{ 
-                                            borderRight: '1px solid #d1d5db',
-                                            borderBottom: '1px solid #d1d5db'
-                                        }}
                                         onClick={() => handleCellClick(cellId)}
                                         onDoubleClick={() => handleCellDoubleClick(cellId)}
-                                        onContextMenu={(e) => handleCellRightClick(e, cellId)}
                                     >
                                         {isEditing ? (
                                             <input
@@ -1394,49 +1201,6 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                         </div>
                     </div>
                 </>
-            )}
-
-            {/* Context Menu for Copy/Paste */}
-            {showContextMenu && contextMenuCell && (
-                <div 
-                    className="fixed bg-white border border-gray-300 rounded-md shadow-lg z-50 py-1"
-                    style={{ 
-                        left: contextMenuPosition.x, 
-                        top: contextMenuPosition.y,
-                        minWidth: '150px'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <button
-                        onClick={() => {
-                            copyCell(contextMenuCell);
-                            closeContextMenu();
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-                    >
-                        📋 Copy (Ctrl+C)
-                    </button>
-                    <button
-                        onClick={() => {
-                            pasteCell(contextMenuCell);
-                            closeContextMenu();
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-                        disabled={!copiedCell}
-                    >
-                        📥 Paste (Ctrl+V)
-                        {copiedCell && (
-                            <span className="text-xs text-gray-500 ml-auto">
-                                "{copiedCell.value.length > 10 ? copiedCell.value.substring(0, 10) + '...' : copiedCell.value}"
-                            </span>
-                        )}
-                    </button>
-                    {copiedCell && (
-                        <div className="border-t border-gray-200 px-4 py-2 text-xs text-gray-500">
-                            Copied from: {copiedCell.cellId}
-                        </div>
-                    )}
-                </div>
             )}
         </div>
     );
