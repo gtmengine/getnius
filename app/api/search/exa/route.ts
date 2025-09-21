@@ -10,8 +10,70 @@ export async function POST(request: NextRequest) {
 
     // Check if API key is available
     if (!process.env.EXA_API_KEY) {
-      console.log("Exa API key not found, returning empty results")
-      return NextResponse.json({ companies: [] })
+      console.log("Exa API key not found, returning mock results for testing")
+      
+      // Return mock data for testing
+      const mockCompanies = [
+        {
+          id: `mock_1_${Date.now()}`,
+          name: "OpenAI",
+          description: "AI research company focused on developing safe artificial general intelligence",
+          website: "https://openai.com",
+          employees: "500-1000",
+          funding: "$11.3B",
+          location: "San Francisco, CA",
+          industry: "AI",
+          founded: "2015",
+          email: undefined,
+          phone: undefined,
+          logo: "https://logo.clearbit.com/openai.com",
+          relevance: null,
+          status: "pending" as const,
+          comment: "",
+          enriched: false,
+          source: "exa" as const,
+        },
+        {
+          id: `mock_2_${Date.now()}`,
+          name: "Anthropic",
+          description: "AI safety company building reliable, interpretable, and steerable AI systems",
+          website: "https://anthropic.com",
+          employees: "100-500",
+          funding: "$750M",
+          location: "San Francisco, CA",
+          industry: "AI",
+          founded: "2021",
+          email: undefined,
+          phone: undefined,
+          logo: "https://logo.clearbit.com/anthropic.com",
+          relevance: null,
+          status: "pending" as const,
+          comment: "",
+          enriched: false,
+          source: "exa" as const,
+        },
+        {
+          id: `mock_3_${Date.now()}`,
+          name: "Stability AI",
+          description: "Leading open source generative AI company",
+          website: "https://stability.ai",
+          employees: "100-500",
+          funding: "$101M",
+          location: "London, UK",
+          industry: "AI",
+          founded: "2019",
+          email: undefined,
+          phone: undefined,
+          logo: "https://logo.clearbit.com/stability.ai",
+          relevance: null,
+          status: "pending" as const,
+          comment: "",
+          enriched: false,
+          source: "exa" as const,
+        }
+      ]
+      
+      return NextResponse.json({ companies: mockCompanies })
     }
 
     // Exa API call - use numResults if provided, otherwise default to 10

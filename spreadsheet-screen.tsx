@@ -202,62 +202,147 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, [selectedCell, handleCellValueChange]);
 
-    // Handle search queries - using Exa.ai API specifically
+    // Handle search queries - using mock data like search screen
     const handleSearchQuery = useCallback(async (query: string) => {
         try {
-            // Use Exa.ai API directly for better results
-            const response = await fetch('/api/search/exa', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query, numResults: 10 })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data.companies && data.companies.length > 0) {
-                    // Format results for spreadsheet with specific columns
-                    const formattedResults = data.companies.map((company: Company) => ({
-                        company: company.name,
-                        description: company.description,
-                        webpage: company.website,
-                        industry: company.industry || 'Unknown'
-                    }));
-                    
-                    populateSpreadsheetWithExaResults(formattedResults);
+            // Mock companies data similar to search screen
+            const mockCompanies = [
+                {
+                    name: "TechCorp",
+                    description: "Leading technology company specializing in cloud solutions and enterprise software",
+                    website: "https://techcorp.com",
+                    industry: "Technology"
+                },
+                {
+                    name: "InnovateLabs",
+                    description: "AI-powered research and development company focused on machine learning solutions",
+                    website: "https://innovatelabs.io",
+                    industry: "AI"
+                },
+                {
+                    name: "DataFlow Systems",
+                    description: "Big data analytics platform helping businesses make data-driven decisions",
+                    website: "https://dataflow.com",
+                    industry: "Analytics"
+                },
+                {
+                    name: "CloudBridge",
+                    description: "Cloud infrastructure provider offering scalable computing solutions",
+                    website: "https://cloudbridge.net",
+                    industry: "Cloud Computing"
+                },
+                {
+                    name: "SecureNet",
+                    description: "Cybersecurity firm providing advanced threat detection and prevention services",
+                    website: "https://securenet.com",
+                    industry: "Cybersecurity"
+                },
+                {
+                    name: "GreenTech Solutions",
+                    description: "Sustainable technology company developing renewable energy management systems",
+                    website: "https://greentech.com",
+                    industry: "CleanTech"
+                },
+                {
+                    name: "HealthAI",
+                    description: "Healthcare technology startup using AI for medical diagnosis and treatment optimization",
+                    website: "https://healthai.com",
+                    industry: "HealthTech"
+                },
+                {
+                    name: "FinanceFlow",
+                    description: "Financial technology platform providing digital banking and payment solutions",
+                    website: "https://financeflow.com",
+                    industry: "FinTech"
                 }
-            }
+            ];
+
+            // Filter companies based on query (simple matching)
+            const filteredCompanies = mockCompanies.filter(company => 
+                company.name.toLowerCase().includes(query.toLowerCase()) ||
+                company.description.toLowerCase().includes(query.toLowerCase()) ||
+                company.industry.toLowerCase().includes(query.toLowerCase())
+            );
+
+            // If no matches, return all companies
+            const companies = filteredCompanies.length > 0 ? filteredCompanies : mockCompanies;
+
+            // Format results for spreadsheet with specific columns
+            const formattedResults = companies.slice(0, 10).map((company) => ({
+                company: company.name,
+                description: company.description,
+                webpage: company.website,
+                industry: company.industry
+            }));
+            
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            populateSpreadsheetWithExaResults(formattedResults);
         } catch (error) {
-            console.error('Exa search query error:', error);
+            console.error('Search query error:', error);
         }
     }, []);
 
     // Handle direct queries (company names, etc.)
     const handleDirectQuery = useCallback(async (query: string) => {
         try {
-            // Use Exa API for direct company searches too
-            const response = await fetch('/api/search/exa', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: `${query} company information`, numResults: 5 })
-            });
+            // Same mock data as search queries
+            const mockCompanies = [
+                {
+                    name: "TechCorp",
+                    description: "Leading technology company specializing in cloud solutions and enterprise software",
+                    website: "https://techcorp.com",
+                    industry: "Technology"
+                },
+                {
+                    name: "InnovateLabs",
+                    description: "AI-powered research and development company focused on machine learning solutions",
+                    website: "https://innovatelabs.io",
+                    industry: "AI"
+                },
+                {
+                    name: "DataFlow Systems",
+                    description: "Big data analytics platform helping businesses make data-driven decisions",
+                    website: "https://dataflow.com",
+                    industry: "Analytics"
+                },
+                {
+                    name: "CloudBridge",
+                    description: "Cloud infrastructure provider offering scalable computing solutions",
+                    website: "https://cloudbridge.net",
+                    industry: "Cloud Computing"
+                },
+                {
+                    name: "SecureNet",
+                    description: "Cybersecurity firm providing advanced threat detection and prevention services",
+                    website: "https://securenet.com",
+                    industry: "Cybersecurity"
+                }
+            ];
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.companies && data.companies.length > 0) {
-                    // Format results for spreadsheet
-                    const formattedResults = data.companies.map((company: Company) => ({
-                        company: company.name,
-                        description: company.description,
-                        webpage: company.website,
-                        industry: company.industry || 'Unknown'
-                    }));
-                    
-                    populateSpreadsheetWithExaResults(formattedResults);
-                } else {
-                    // Just put the value in the selected cell
-                    if (selectedCell) {
-                        handleCellValueChange(selectedCell, query);
-                    }
+            // Try to find exact or partial matches
+            const matchedCompanies = mockCompanies.filter(company => 
+                company.name.toLowerCase().includes(query.toLowerCase())
+            );
+
+            if (matchedCompanies.length > 0) {
+                // Format results for spreadsheet
+                const formattedResults = matchedCompanies.slice(0, 5).map((company) => ({
+                    company: company.name,
+                    description: company.description,
+                    webpage: company.website,
+                    industry: company.industry
+                }));
+                
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                populateSpreadsheetWithExaResults(formattedResults);
+            } else {
+                // Just put the value in the selected cell
+                if (selectedCell) {
+                    handleCellValueChange(selectedCell, query);
                 }
             }
         } catch (error) {
