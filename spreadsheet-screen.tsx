@@ -879,19 +879,19 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             </div>
 
             {/* Spreadsheet */}
-            <div className="flex-1 overflow-auto">
-                <div className="relative">
+            <div className="flex-1 overflow-auto bg-white">
+                <div className="relative min-w-full">
                     {/* Column Headers */}
-                    <div className="sticky top-0 z-10 bg-gray-100 border-b border-gray-300">
+                    <div className="sticky top-0 z-10 bg-gray-100 border-b-2 border-gray-300 shadow-sm">
                         <div className="flex">
                             {/* Corner cell */}
-                            <div className="w-12 h-8 border-r border-gray-300 bg-gray-200"></div>
+                            <div className="w-12 h-10 border-r border-gray-300 bg-gray-200"></div>
                             
                             {/* Column headers with context menu */}
                             {Array.from({ length: cols }, (_, index) => (
                                 <div
                                     key={index}
-                                    className="relative w-24 h-8 flex items-center justify-center border-r border-gray-300 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 cursor-pointer group"
+                                    className="relative w-32 h-10 flex items-center justify-center border-r border-gray-300 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 cursor-pointer group"
                                     onContextMenu={(e) => {
                                         e.preventDefault();
                                         setSelectedColumn(index);
@@ -924,16 +924,16 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                             <div className="relative">
                                 <button
                                     onClick={() => getColumnSuggestions()}
-                                    className="w-32 h-8 flex items-center justify-center border-r border-gray-300 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-200 transition-colors"
+                                    className="w-32 h-10 flex items-center justify-center border-r border-gray-300 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-200 transition-colors"
                                     title="Add column with AI suggestions"
                                 >
-                                    <Plus className="w-3 h-3 mr-1" />
+                                    <Plus className="w-4 h-4 mr-1" />
                                     Add column
                                 </button>
                                 
                                 {/* AI Suggestions Dropdown */}
                                 {showSuggestions && (
-                                    <div className="absolute top-8 left-0 w-80 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-96 overflow-y-auto">
+                                    <div className="absolute top-10 left-0 w-80 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-96 overflow-y-auto">
                                         <div className="p-3 border-b border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <h4 className="text-sm font-medium text-gray-900">📊 AI Column Suggestions</h4>
@@ -998,7 +998,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                     {Array.from({ length: rows }, (_, rowIndex) => (
                         <div key={rowIndex} className="flex">
                             {/* Row header */}
-                            <div className="w-12 h-8 flex items-center justify-center border-r border-b border-gray-300 text-xs font-medium text-gray-700 bg-gray-100">
+                            <div className="w-12 h-10 flex items-center justify-center border-r border-b border-gray-300 text-sm font-medium text-gray-700 bg-gray-100">
                                 {rowIndex + 1}
                             </div>
                             
@@ -1012,7 +1012,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                 return (
                                     <div
                                         key={colIndex}
-                                        className={`w-24 h-8 border-r border-b border-gray-300 relative ${
+                                        className={`w-32 h-10 border-r border-b border-gray-300 relative ${
                                             isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
                                         }`}
                                         onClick={() => handleCellClick(cellId)}
@@ -1026,10 +1026,10 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                                 onChange={(e) => setEditValue(e.target.value)}
                                                 onKeyDown={handleKeyPress}
                                                 onBlur={handleEditConfirm}
-                                                className="w-full h-full px-1 text-xs border-none outline-none bg-white"
+                                                className="w-full h-full px-2 text-sm border-none outline-none bg-white"
                                             />
                                         ) : (
-                                            <div className="w-full h-full px-1 flex items-center text-xs text-gray-900 overflow-hidden">
+                                            <div className="w-full h-full px-2 flex items-center text-sm text-gray-900 overflow-hidden whitespace-nowrap">
                                                 {cell?.value || ""}
                                             </div>
                                         )}
@@ -1038,7 +1038,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                             })}
                             
                             {/* Empty cell to match add column button */}
-                            <div className="w-32 h-8 border-r border-b border-gray-300 bg-gray-50"></div>
+                            <div className="w-32 h-10 border-r border-b border-gray-300 bg-gray-50"></div>
                         </div>
                     ))}
                 </div>
