@@ -881,6 +881,80 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
                 <button className="p-1 hover:bg-gray-200 rounded">
                     <AlignRight className="w-4 h-4 text-gray-600" />
                 </button>
+                
+                <div className="w-px h-6 bg-gray-300 mx-2" />
+                
+                {/* Text Wrapping Controls */}
+                <button 
+                    className="p-1 hover:bg-green-100 rounded border border-green-300"
+                    onClick={() => {
+                        if (tableInstanceRef.current) {
+                            // Quick wrap text for selected cells
+                            const wrapStyle = tableInstanceRef.current.addStyle({
+                                wrap: true,
+                                align: 'left',
+                                fontSize: 10,
+                                color: '#333',
+                                verticalAlign: 'top',
+                                padding: 4
+                            });
+                            
+                            // Apply to all cells with long text
+                            for (let row = 0; row <= 10; row++) {
+                                for (let col = 0; col <= 5; col++) {
+                                    const cell = tableInstanceRef.current.cell(row, col);
+                                    if (cell && cell.value && cell.value.length > 15) {
+                                        tableInstanceRef.current.cell(row, col, { 
+                                            value: cell.value, 
+                                            style: wrapStyle 
+                                        });
+                                    }
+                                }
+                            }
+                            
+                            tableInstanceRef.current.render();
+                            console.log('Quick text wrap applied');
+                        }
+                    }}
+                    title="Wrap text in cells (Excel-style)"
+                >
+                    <span className="text-xs font-medium text-green-700">📝 Wrap</span>
+                </button>
+                
+                <button 
+                    className="p-1 hover:bg-red-100 rounded border border-red-300"
+                    onClick={() => {
+                        if (tableInstanceRef.current) {
+                            // Quick unwrap text
+                            const noWrapStyle = tableInstanceRef.current.addStyle({
+                                wrap: false,
+                                align: 'left',
+                                fontSize: 10,
+                                color: '#333',
+                                verticalAlign: 'middle'
+                            });
+                            
+                            // Remove wrapping from all cells
+                            for (let row = 0; row <= 10; row++) {
+                                for (let col = 0; col <= 5; col++) {
+                                    const cell = tableInstanceRef.current.cell(row, col);
+                                    if (cell && cell.value) {
+                                        tableInstanceRef.current.cell(row, col, { 
+                                            value: cell.value, 
+                                            style: noWrapStyle 
+                                        });
+                                    }
+                                }
+                            }
+                            
+                            tableInstanceRef.current.render();
+                            console.log('Text unwrapped');
+                        }
+                    }}
+                    title="Unwrap text in cells"
+                >
+                    <span className="text-xs font-medium text-red-700">🔄 Unwrap</span>
+                </button>
             </div>
 
             {/* Enhanced Query Bar - Web Search Enabled */}
@@ -1051,37 +1125,111 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
                                     Merge Cells
                                 </button>
                                 <button 
-                                    className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                                    className="px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
                                     onClick={() => {
                                         if (tableInstanceRef.current) {
-                                            // Add text wrapping style to description columns
+                                            // Create text wrapping style for Excel-like behavior
+                                            const wrapStyle = tableInstanceRef.current.addStyle({
+                                                wrap: true,
+                                                align: 'left',
+                                                fontSize: 10,
+                                                color: '#333',
+                                                verticalAlign: 'top',
+                                                padding: 4
+                                            });
+                                            
+                                            // Apply text wrapping to all cells with content
+                                            for (let row = 0; row <= 10; row++) {
+                                                for (let col = 0; col <= 5; col++) {
+                                                    const cell = tableInstanceRef.current.cell(row, col);
+                                                    if (cell && cell.value && cell.value.length > 20) {
+                                                        tableInstanceRef.current.cell(row, col, { 
+                                                            value: cell.value, 
+                                                            style: wrapStyle 
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                            
+                                            tableInstanceRef.current.render();
+                                            console.log('Text wrapping applied to all long text cells');
+                                        } else {
+                                            console.log('Wrap text clicked (Wolf Table not available)');
+                                        }
+                                    }}
+                                >
+                                    📝 Wrap Text (Excel-style)
+                                </button>
+                                <button 
+                                    className="px-3 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700"
+                                    onClick={() => {
+                                        if (tableInstanceRef.current) {
+                                            // Apply text wrapping to specific range like Excel
                                             const wrapStyle = tableInstanceRef.current.addStyle({
                                                 wrap: true,
                                                 align: 'left',
                                                 fontSize: 9,
                                                 color: '#333',
-                                                verticalAlign: 'top'
+                                                verticalAlign: 'top',
+                                                wordBreak: 'break-word'
                                             });
                                             
-                                            // Wrap text in description columns (column 2)
-                                            for (let row = 1; row <= 4; row++) {
-                                                const cell = tableInstanceRef.current.cell(row, 2);
-                                                if (cell && cell.value) {
-                                                    tableInstanceRef.current.cell(row, 2, { 
-                                                        value: cell.value, 
-                                                        style: wrapStyle 
-                                                    });
+                                            // Wrap text in a specific range (like selecting A1:C5 in Excel)
+                                            for (let row = 0; row <= 4; row++) {
+                                                for (let col = 0; col <= 2; col++) {
+                                                    const cell = tableInstanceRef.current.cell(row, col);
+                                                    if (cell && cell.value) {
+                                                        tableInstanceRef.current.cell(row, col, { 
+                                                            value: cell.value, 
+                                                            style: wrapStyle 
+                                                        });
+                                                    }
                                                 }
                                             }
                                             
                                             tableInstanceRef.current.render();
-                                            console.log('Text wrapping applied to description columns');
+                                            console.log('Text wrapping applied to range A1:C5');
                                         } else {
-                                            console.log('Wrap descriptions clicked (Wolf Table not available)');
+                                            console.log('Wrap range clicked (Wolf Table not available)');
                                         }
                                     }}
                                 >
-                                    Wrap Text
+                                    📋 Wrap Range A1:C5
+                                </button>
+                                <button 
+                                    className="px-3 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+                                    onClick={() => {
+                                        if (tableInstanceRef.current) {
+                                            // Remove text wrapping (unwrap text)
+                                            const noWrapStyle = tableInstanceRef.current.addStyle({
+                                                wrap: false,
+                                                align: 'left',
+                                                fontSize: 10,
+                                                color: '#333',
+                                                verticalAlign: 'middle'
+                                            });
+                                            
+                                            // Remove wrapping from all cells
+                                            for (let row = 0; row <= 10; row++) {
+                                                for (let col = 0; col <= 5; col++) {
+                                                    const cell = tableInstanceRef.current.cell(row, col);
+                                                    if (cell && cell.value) {
+                                                        tableInstanceRef.current.cell(row, col, { 
+                                                            value: cell.value, 
+                                                            style: noWrapStyle 
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                            
+                                            tableInstanceRef.current.render();
+                                            console.log('Text wrapping removed from all cells');
+                                        } else {
+                                            console.log('Unwrap text clicked (Wolf Table not available)');
+                                        }
+                                    }}
+                                >
+                                    🔄 Unwrap Text
                                 </button>
                             </div>
                         </div>
