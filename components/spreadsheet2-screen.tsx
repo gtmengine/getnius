@@ -758,8 +758,8 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
                         Back
                     </button>
                     <div className="flex items-center gap-2">
-                        <Grid3x3 className="w-6 h-6 text-blue-600" />
-                        <span className="text-lg font-medium">Spreadsheet 2 - Advanced</span>
+                        <Grid3x3 className="w-6 h-6 text-purple-600" />
+                        <span className="text-lg font-medium">Spreadsheet 2 - Wolf Table</span>
                     </div>
                     <button className="p-1 hover:bg-gray-100 rounded">
                         <MoreHorizontal className="w-5 h-5 text-gray-600" />
@@ -977,94 +977,10 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
                 )}
             </div>
 
-            {/* Two-Panel Layout */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Left Panel - Traditional Spreadsheet */}
-                <div className="w-1/2 border-r border-gray-200 overflow-auto">
-                    <div className="relative">
-                        {/* Column Headers */}
-                        <div className="sticky top-0 z-10 bg-gray-100 border-b border-gray-300">
-                            <div className="flex">
-                                {/* Corner cell */}
-                                <div className="w-12 h-8 border-r border-gray-300 bg-gray-200"></div>
-                                
-                                {/* Column headers */}
-                                {Array.from({ length: cols }, (_, index) => (
-                                    <div
-                                        key={index}
-                                        className="relative w-24 h-8 flex items-center justify-center border-r border-gray-300 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 cursor-pointer group"
-                                        onClick={() => setSelectedColumn(index)}
-                                    >
-                                        {getColumnHeader(index)}
-                                    </div>
-                                ))}
-                                
-                                {/* Add Column Button */}
-                                <div className="relative">
-                                    <button
-                                        onClick={() => addColumns(1)}
-                                        className="w-32 h-8 flex items-center justify-center border-r border-gray-300 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-200 transition-colors"
-                                        title="Add column"
-                                    >
-                                        <Plus className="w-3 h-3 mr-1" />
-                                        Add column
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Rows */}
-                        {Array.from({ length: rows }, (_, rowIndex) => (
-                            <div key={rowIndex} className="flex">
-                                {/* Row header */}
-                                <div className="w-12 h-8 flex items-center justify-center border-r border-b border-gray-300 text-xs font-medium text-gray-700 bg-gray-100">
-                                    {rowIndex + 1}
-                                </div>
-                                
-                                {/* Cells */}
-                                {Array.from({ length: cols }, (_, colIndex) => {
-                                    const cell = getCellByPosition(rowIndex, colIndex);
-                                    const cellId = `${getColumnHeader(colIndex)}${rowIndex + 1}`;
-                                    const isSelected = selectedCell === cellId;
-                                    const isEditing = editingCell === cellId;
-                                    
-                                    return (
-                                        <div
-                                            key={colIndex}
-                                            className={`w-24 h-8 border-r border-b border-gray-300 relative ${
-                                                isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                                            }`}
-                                            onClick={() => handleCellClick(cellId)}
-                                            onDoubleClick={() => handleCellDoubleClick(cellId)}
-                                        >
-                                            {isEditing ? (
-                                                <input
-                                                    ref={inputRef}
-                                                    type="text"
-                                                    value={editValue}
-                                                    onChange={(e) => setEditValue(e.target.value)}
-                                                    onKeyDown={handleKeyPress}
-                                                    onBlur={handleEditConfirm}
-                                                    className="w-full h-full px-1 text-xs border-none outline-none bg-white"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full px-1 flex items-center text-xs text-gray-900 overflow-hidden">
-                                                    {cell?.value || ""}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                
-                                {/* Empty cell to match add column button */}
-                                <div className="w-32 h-8 border-r border-b border-gray-300 bg-gray-50"></div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Right Panel - Wolf Table */}
-                <div className="w-1/2 bg-gray-50 overflow-auto">
+            {/* Wolf Table Only Layout */}
+            <div className="flex-1 overflow-auto">
+                {/* Wolf Table Panel */}
+                <div className="w-full bg-gray-50 overflow-auto">
                     <div className="p-4">
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                             <div className="flex items-center justify-between mb-4">
@@ -1206,7 +1122,7 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
                 </div>
                 
                 <div className="text-xs text-gray-500">
-                    Traditional: {rows} rows × {cols} columns | Wolf Table: Canvas-based
+                    Wolf Table: Canvas-based with advanced features
                 </div>
             </div>
         </div>
