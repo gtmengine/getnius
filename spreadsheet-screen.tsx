@@ -159,21 +159,27 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             });
         }
         
-        console.log(`Copied cell ${cellId}: "${cellValue}"`);
+        console.log(`✅ Copied cell ${cellId}: "${cellValue}"`);
+        
+        // Visual feedback - you could add a toast notification here
+        if (typeof window !== 'undefined') {
+            // Simple feedback via console for now, could be enhanced with toast
+            console.log(`📋 Cell ${cellId} copied to clipboard`);
+        }
     }, [getCellValue]);
 
     // Paste cell functionality
     const pasteCell = useCallback((targetCellId: string) => {
         if (copiedCell) {
             handleCellValueChange(targetCellId, copiedCell.value);
-            console.log(`Pasted "${copiedCell.value}" to cell ${targetCellId}`);
+            console.log(`✅ Pasted "${copiedCell.value}" from ${copiedCell.cellId} to cell ${targetCellId}`);
         } else {
             // Try to paste from system clipboard
             if (navigator.clipboard && navigator.clipboard.readText) {
                 navigator.clipboard.readText().then(text => {
                     if (text) {
                         handleCellValueChange(targetCellId, text);
-                        console.log(`Pasted from clipboard: "${text}" to cell ${targetCellId}`);
+                        console.log(`✅ Pasted from system clipboard: "${text}" to cell ${targetCellId}`);
                     }
                 }).catch(err => {
                     console.warn('Could not read from clipboard:', err);
@@ -199,15 +205,20 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     // Global keyboard shortcuts and click handlers
     useEffect(() => {
         const handleGlobalKeyDown = (e: KeyboardEvent) => {
-            if (e.ctrlKey || e.metaKey) {
+            // Only handle global shortcuts when not editing a cell
+            if (!editingCell && (e.ctrlKey || e.metaKey)) {
                 if (e.key === 'c' || e.key === 'C') {
-                    if (selectedCell && !editingCell) {
+                    if (selectedCell) {
                         e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Global Ctrl+C triggered for cell:', selectedCell);
                         copyCell(selectedCell);
                     }
                 } else if (e.key === 'v' || e.key === 'V') {
-                    if (selectedCell && !editingCell) {
+                    if (selectedCell) {
                         e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Global Ctrl+V triggered for cell:', selectedCell);
                         pasteCell(selectedCell);
                     }
                 }
@@ -218,11 +229,12 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             closeContextMenu();
         };
 
-        document.addEventListener('keydown', handleGlobalKeyDown);
+        // Add keyboard event listener with capture to ensure it gets called
+        document.addEventListener('keydown', handleGlobalKeyDown, true);
         document.addEventListener('click', handleGlobalClick);
 
         return () => {
-            document.removeEventListener('keydown', handleGlobalKeyDown);
+            document.removeEventListener('keydown', handleGlobalKeyDown, true);
             document.removeEventListener('click', handleGlobalClick);
         };
     }, [selectedCell, editingCell, copyCell, pasteCell, closeContextMenu]);
@@ -235,34 +247,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     }, [editingCell, editValue, handleCellValueChange]);
 
-    // Handle key press in cell
-    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            // Check if this is a query (starts with natural language or specific patterns)
-            if (editValue && !editValue.startsWith('=') && editValue.length > 3) {
-                handleQuerySubmit(editValue);
-            } else {
-            handleEditConfirm();
-            }
-        } else if (e.key === 'Escape') {
-            setEditingCell(null);
-        } else if (e.ctrlKey || e.metaKey) {
-            // Handle Ctrl/Cmd + key combinations
-            if (e.key === 'c' || e.key === 'C') {
-                e.preventDefault();
-                if (selectedCell) {
-                    copyCell(selectedCell);
-                }
-            } else if (e.key === 'v' || e.key === 'V') {
-                e.preventDefault();
-                if (selectedCell) {
-                    pasteCell(selectedCell);
-                }
-            }
-        }
-    }, [handleEditConfirm, editValue, selectedCell, copyCell, pasteCell]);
-
-    // Handle query submission
+    // Handle query submission (moved up to avoid dependency issues)
     const handleQuerySubmit = useCallback(async (query: string) => {
         if (!query.trim()) return;
 
@@ -284,7 +269,22 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         } finally {
             setIsProcessingQuery(false);
         }
-    }, []);
+    }, [handleFormulaCalculation, handleSearchQuery]);
+
+    // Handle key press in cell (only for editing-specific keys)
+    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            // Check if this is a query (starts with natural language or specific patterns)
+            if (editValue && !editValue.startsWith('=') && editValue.length > 3) {
+                handleQuerySubmit(editValue);
+            } else {
+                handleEditConfirm();
+            }
+        } else if (e.key === 'Escape') {
+            setEditingCell(null);
+        }
+        // Note: Copy/paste is handled by global keyboard handler
+    }, [handleEditConfirm, editValue, handleQuerySubmit]);
 
     // Handle formula calculations
     const handleFormulaCalculation = useCallback((formula: string) => {
