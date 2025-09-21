@@ -69,6 +69,12 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     const [queryResults, setQueryResults] = useState<any[]>([]);
     const [queryHistory, setQueryHistory] = useState<string[]>([]);
 
+    // Copy/Paste state
+    const [copiedCell, setCopiedCell] = useState<{cellId: string, value: string} | null>(null);
+    const [showContextMenu, setShowContextMenu] = useState(false);
+    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+    const [contextMenuCell, setContextMenuCell] = useState<string | null>(null);
+
     // Column headers (A, B, C, etc.)
     const getColumnHeader = useCallback((index: number): string => {
         let result = '';
@@ -105,6 +111,37 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
         setCells(initialCells);
     }, [rows, cols, initialData]);
+
+    // Global keyboard shortcuts and click handlers
+    useEffect(() => {
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'c' || e.key === 'C') {
+                    if (selectedCell && !editingCell) {
+                        e.preventDefault();
+                        copyCell(selectedCell);
+                    }
+                } else if (e.key === 'v' || e.key === 'V') {
+                    if (selectedCell && !editingCell) {
+                        e.preventDefault();
+                        pasteCell(selectedCell);
+                    }
+                }
+            }
+        };
+
+        const handleGlobalClick = () => {
+            closeContextMenu();
+        };
+
+        document.addEventListener('keydown', handleGlobalKeyDown);
+        document.addEventListener('click', handleGlobalClick);
+
+        return () => {
+            document.removeEventListener('keydown', handleGlobalKeyDown);
+            document.removeEventListener('click', handleGlobalClick);
+        };
+    }, [selectedCell, editingCell, copyCell, pasteCell, closeContextMenu]);
 
     // Handle cell click
     const handleCellClick = useCallback((cellId: string) => {
@@ -153,8 +190,21 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             }
         } else if (e.key === 'Escape') {
             setEditingCell(null);
+        } else if (e.ctrlKey || e.metaKey) {
+            // Handle Ctrl/Cmd + key combinations
+            if (e.key === 'c' || e.key === 'C') {
+                e.preventDefault();
+                if (selectedCell) {
+                    copyCell(selectedCell);
+                }
+            } else if (e.key === 'v' || e.key === 'V') {
+                e.preventDefault();
+                if (selectedCell) {
+                    pasteCell(selectedCell);
+                }
+            }
         }
-    }, [handleEditConfirm, editValue]);
+    }, [handleEditConfirm, editValue, selectedCell, copyCell, pasteCell]);
 
     // Handle query submission
     const handleQuerySubmit = useCallback(async (query: string) => {
@@ -604,42 +654,32 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         setShowSuggestions(true);
         
         try {
-            // Get existing column names
-            const existingColumns = Array.from({ length: cols }, (_, index) => getColumnHeader(index));
+            // Mock suggestions that will trigger company searches
+            const mockSuggestions = [
+                { name: "AI companies", description: "Find artificial intelligence companies", type: "search", category: "industry", priority: "high" },
+                { name: "fintech startups", description: "Discover financial technology startups", type: "search", category: "industry", priority: "high" },
+                { name: "healthcare technology", description: "Search for healthcare tech companies", type: "search", category: "industry", priority: "medium" },
+                { name: "cloud computing", description: "Find cloud infrastructure companies", type: "search", category: "industry", priority: "medium" },
+                { name: "cybersecurity firms", description: "Discover cybersecurity companies", type: "search", category: "industry", priority: "high" },
+                { name: "green technology", description: "Find sustainable tech companies", type: "search", category: "industry", priority: "medium" },
+                { name: "data analytics", description: "Search for data analytics platforms", type: "search", category: "industry", priority: "medium" },
+                { name: "e-commerce platforms", description: "Find e-commerce technology companies", type: "search", category: "industry", priority: "low" }
+            ];
             
-            // Analyze current data for context
-            const dataContext = cells
-                .filter(cell => cell.value)
-                .slice(0, 20)
-                .map(cell => cell.value)
-                .join(", ");
-                
-            const response = await fetch('/api/column-suggestions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    existingColumns,
-                    dataContext,
-                    industryHint: "Business/Market Research"
-                })
-            });
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 800));
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            setColumnSuggestions(data.suggestions || []);
+            setColumnSuggestions(mockSuggestions);
         } catch (error) {
             console.error('Failed to get column suggestions:', error);
-            // Fallback suggestions
+            // Fallback suggestions that will trigger company searches
             setColumnSuggestions([
-                { name: "CEO Name", description: "Name of the company's CEO", type: "text", category: "contact", priority: "high" },
-                { name: "Annual Revenue", description: "Company's yearly revenue in USD", type: "number", category: "financial", priority: "high" },
-                { name: "Employee Count", description: "Total number of employees", type: "number", category: "operational", priority: "high" },
-                { name: "LinkedIn URL", description: "Company's LinkedIn profile", type: "url", category: "social", priority: "medium" },
-                { name: "Industry", description: "Primary industry sector", type: "text", category: "market", priority: "high" },
-                { name: "Funding Status", description: "Current funding stage", type: "text", category: "financial", priority: "high" }
+                { name: "AI companies", description: "Find artificial intelligence companies", type: "search", category: "industry", priority: "high" },
+                { name: "fintech startups", description: "Discover financial technology startups", type: "search", category: "industry", priority: "high" },
+                { name: "healthcare technology", description: "Search for healthcare tech companies", type: "search", category: "industry", priority: "medium" },
+                { name: "cloud computing", description: "Find cloud infrastructure companies", type: "search", category: "industry", priority: "medium" },
+                { name: "cybersecurity firms", description: "Discover cybersecurity companies", type: "search", category: "industry", priority: "high" },
+                { name: "green technology", description: "Find sustainable tech companies", type: "search", category: "industry", priority: "medium" }
             ]);
         } finally {
             setLoadingSuggestions(false);
@@ -684,18 +724,80 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     }, [cols, getColumnHeader, addMultipleColumns]);
 
     // Function to apply a suggestion
-    const applySuggestion = useCallback((suggestion: any) => {
+    const applySuggestion = useCallback(async (suggestion: any) => {
         addColumns(1);
         setShowSuggestions(false);
         
         // Log the suggestion for debugging
         console.log(`Added column: ${suggestion.name} - ${suggestion.description}`);
-    }, [addColumns]);
+        
+        // Trigger search with suggestion name to populate spreadsheet
+        if (suggestion.name) {
+            setIsProcessingQuery(true);
+            try {
+                // Use the same mock search functionality
+                await handleSearchQuery(suggestion.name);
+            } catch (error) {
+                console.error('Error applying suggestion search:', error);
+            } finally {
+                setIsProcessingQuery(false);
+            }
+        }
+    }, [addColumns, handleSearchQuery]);
 
     // Get cell by position
     const getCellByPosition = useCallback((row: number, col: number) => {
         return cells.find(cell => cell.row === row && cell.col === col);
     }, [cells]);
+
+    // Copy cell functionality
+    const copyCell = useCallback((cellId: string) => {
+        const cellValue = getCellValue(cellId);
+        setCopiedCell({ cellId, value: cellValue });
+        
+        // Copy to system clipboard as well
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(cellValue).catch(err => {
+                console.warn('Could not copy to clipboard:', err);
+            });
+        }
+        
+        console.log(`Copied cell ${cellId}: "${cellValue}"`);
+    }, [getCellValue]);
+
+    // Paste cell functionality
+    const pasteCell = useCallback((targetCellId: string) => {
+        if (copiedCell) {
+            handleCellValueChange(targetCellId, copiedCell.value);
+            console.log(`Pasted "${copiedCell.value}" to cell ${targetCellId}`);
+        } else {
+            // Try to paste from system clipboard
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                navigator.clipboard.readText().then(text => {
+                    if (text) {
+                        handleCellValueChange(targetCellId, text);
+                        console.log(`Pasted from clipboard: "${text}" to cell ${targetCellId}`);
+                    }
+                }).catch(err => {
+                    console.warn('Could not read from clipboard:', err);
+                });
+            }
+        }
+    }, [copiedCell, handleCellValueChange]);
+
+    // Handle right-click context menu
+    const handleCellRightClick = useCallback((e: React.MouseEvent, cellId: string) => {
+        e.preventDefault();
+        setContextMenuCell(cellId);
+        setContextMenuPosition({ x: e.clientX, y: e.clientY });
+        setShowContextMenu(true);
+    }, []);
+
+    // Close context menu
+    const closeContextMenu = useCallback(() => {
+        setShowContextMenu(false);
+        setContextMenuCell(null);
+    }, []);
 
     return (
         <div className="h-screen bg-white flex flex-col">
@@ -1064,10 +1166,13 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                     <div
                                         key={colIndex}
                                         className={`w-24 h-8 border-r border-b border-gray-300 relative ${
-                                            isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                                            isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 
+                                            copiedCell && copiedCell.cellId === cellId ? 'ring-2 ring-green-400 bg-green-50' :
+                                            'hover:bg-gray-50'
                                         }`}
                                         onClick={() => handleCellClick(cellId)}
                                         onDoubleClick={() => handleCellDoubleClick(cellId)}
+                                        onContextMenu={(e) => handleCellRightClick(e, cellId)}
                                     >
                                         {isEditing ? (
                                             <input
@@ -1252,6 +1357,49 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* Context Menu for Copy/Paste */}
+            {showContextMenu && contextMenuCell && (
+                <div 
+                    className="fixed bg-white border border-gray-300 rounded-md shadow-lg z-50 py-1"
+                    style={{ 
+                        left: contextMenuPosition.x, 
+                        top: contextMenuPosition.y,
+                        minWidth: '150px'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button
+                        onClick={() => {
+                            copyCell(contextMenuCell);
+                            closeContextMenu();
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                    >
+                        📋 Copy (Ctrl+C)
+                    </button>
+                    <button
+                        onClick={() => {
+                            pasteCell(contextMenuCell);
+                            closeContextMenu();
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                        disabled={!copiedCell}
+                    >
+                        📥 Paste (Ctrl+V)
+                        {copiedCell && (
+                            <span className="text-xs text-gray-500 ml-auto">
+                                "{copiedCell.value.length > 10 ? copiedCell.value.substring(0, 10) + '...' : copiedCell.value}"
+                            </span>
+                        )}
+                    </button>
+                    {copiedCell && (
+                        <div className="border-t border-gray-200 px-4 py-2 text-xs text-gray-500">
+                            Copied from: {copiedCell.cellId}
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );
