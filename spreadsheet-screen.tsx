@@ -1047,18 +1047,30 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
 
             {/* Spreadsheet */}
             <div className="flex-1 overflow-auto">
-                <div className="relative">
+                <div className="relative border border-gray-400" style={{ borderColor: '#9ca3af' }}>
                     {/* Column Headers */}
                     <div className="sticky top-0 z-10 bg-gray-100 border-b border-gray-300">
                         <div className="flex">
                             {/* Corner cell */}
-                            <div className="w-12 h-8 border-r border-gray-300 bg-gray-200"></div>
+                            <div 
+                                className="w-12 h-8 border-r border-gray-400 bg-gray-300"
+                                style={{ 
+                                    borderRight: '1px solid #9ca3af',
+                                    borderBottom: '1px solid #9ca3af',
+                                    background: '#e5e7eb'
+                                }}
+                            ></div>
                             
                             {/* Column headers with context menu */}
                             {Array.from({ length: cols }, (_, index) => (
                                 <div
                                     key={index}
-                                    className="relative w-24 h-8 flex items-center justify-center border-r border-gray-300 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 cursor-pointer group"
+                                    className="relative w-24 h-8 flex items-center justify-center border-r border-gray-400 text-xs font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 cursor-pointer group"
+                                    style={{ 
+                                        borderRight: '1px solid #9ca3af',
+                                        borderBottom: '1px solid #9ca3af',
+                                        background: '#f3f4f6'
+                                    }}
                                     onContextMenu={(e) => {
                                         e.preventDefault();
                                         setSelectedColumn(index);
@@ -1165,7 +1177,14 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                     {Array.from({ length: rows }, (_, rowIndex) => (
                         <div key={rowIndex} className="flex">
                             {/* Row header */}
-                            <div className="w-12 h-8 flex items-center justify-center border-r border-b border-gray-300 text-xs font-medium text-gray-700 bg-gray-100">
+                            <div 
+                                className="w-12 h-8 flex items-center justify-center border-r border-b border-gray-400 text-xs font-semibold text-gray-700 bg-gray-200"
+                                style={{ 
+                                    borderRight: '1px solid #9ca3af',
+                                    borderBottom: '1px solid #d1d5db',
+                                    background: '#f3f4f6'
+                                }}
+                            >
                                 {rowIndex + 1}
                             </div>
                             
@@ -1179,11 +1198,15 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                 return (
                                     <div
                                         key={colIndex}
-                                        className={`w-24 h-8 border-r border-b border-gray-300 relative ${
-                                            isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 
-                                            copiedCell && copiedCell.cellId === cellId ? 'ring-2 ring-green-400 bg-green-50' :
+                                        className={`w-24 h-8 border-r border-b border-gray-300 relative bg-white ${
+                                            isSelected ? 'ring-2 ring-blue-500 bg-blue-50 z-10' : 
+                                            copiedCell && copiedCell.cellId === cellId ? 'ring-2 ring-green-400 bg-green-50 z-10' :
                                             'hover:bg-gray-50'
                                         }`}
+                                        style={{ 
+                                            borderRight: '1px solid #d1d5db',
+                                            borderBottom: '1px solid #d1d5db'
+                                        }}
                                         onClick={() => handleCellClick(cellId)}
                                         onDoubleClick={() => handleCellDoubleClick(cellId)}
                                         onContextMenu={(e) => handleCellRightClick(e, cellId)}
