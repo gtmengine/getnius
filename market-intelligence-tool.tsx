@@ -10,6 +10,7 @@ import ActionScreen from "./action-screen"
 import SettingsScreen from "./settings-screen"
 import SpreadsheetScreen from "./spreadsheet-screen"
 import EnhancedSpreadsheetScreen from "./enhanced-spreadsheet-screen"
+import Test2Screen from "./components/test2-screen"
 import { EnhancedSearchScreen } from "./components/enhanced-search-screen"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -449,6 +450,16 @@ const MarketIntelligenceTool = React.memo(() => {
       props: {
         setCurrentScreen,
         initialData: enrichedCompanies
+      },
+      buttonType: 'normal'
+    },
+    {
+      id: "test2",
+      name: "Test 2",
+      icon: Grid3x3,
+      component: Test2Screen,
+      props: {
+        setCurrentScreen
       },
       buttonType: 'normal'
     },
