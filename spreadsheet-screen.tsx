@@ -112,6 +112,90 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         setCells(initialCells);
     }, [rows, cols, initialData]);
 
+
+    // Handle cell click
+    const handleCellClick = useCallback((cellId: string) => {
+        setSelectedCell(cellId);
+        setEditingCell(null);
+        const cell = cells.find(c => c.id === cellId);
+        if (cell) {
+            setEditValue(cell.value);
+        }
+    }, [cells]);
+
+    // Handle cell double click to edit
+    const handleCellDoubleClick = useCallback((cellId: string) => {
+        setEditingCell(cellId);
+        const cell = cells.find(c => c.id === cellId);
+        if (cell) {
+            setEditValue(cell.value);
+        }
+        setTimeout(() => inputRef.current?.focus(), 0);
+    }, [cells]);
+
+    // Handle cell value change
+    const handleCellValueChange = useCallback((cellId: string, newValue: string) => {
+        setCells(prev => prev.map(cell => 
+            cell.id === cellId ? { ...cell, value: newValue } : cell
+        ));
+        setEditValue(newValue);
+    }, []);
+
+    // Get cell value by ID
+    const getCellValue = useCallback((cellId: string) => {
+        const cell = cells.find(c => c.id === cellId);
+        return cell ? cell.value : "";
+    }, [cells]);
+
+    // Copy cell functionality
+    const copyCell = useCallback((cellId: string) => {
+        const cellValue = getCellValue(cellId);
+        setCopiedCell({ cellId, value: cellValue });
+        
+        // Copy to system clipboard as well
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(cellValue).catch(err => {
+                console.warn('Could not copy to clipboard:', err);
+            });
+        }
+        
+        console.log(`Copied cell ${cellId}: "${cellValue}"`);
+    }, [getCellValue]);
+
+    // Paste cell functionality
+    const pasteCell = useCallback((targetCellId: string) => {
+        if (copiedCell) {
+            handleCellValueChange(targetCellId, copiedCell.value);
+            console.log(`Pasted "${copiedCell.value}" to cell ${targetCellId}`);
+        } else {
+            // Try to paste from system clipboard
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                navigator.clipboard.readText().then(text => {
+                    if (text) {
+                        handleCellValueChange(targetCellId, text);
+                        console.log(`Pasted from clipboard: "${text}" to cell ${targetCellId}`);
+                    }
+                }).catch(err => {
+                    console.warn('Could not read from clipboard:', err);
+                });
+            }
+        }
+    }, [copiedCell, handleCellValueChange]);
+
+    // Handle right-click context menu
+    const handleCellRightClick = useCallback((e: React.MouseEvent, cellId: string) => {
+        e.preventDefault();
+        setContextMenuCell(cellId);
+        setContextMenuPosition({ x: e.clientX, y: e.clientY });
+        setShowContextMenu(true);
+    }, []);
+
+    // Close context menu
+    const closeContextMenu = useCallback(() => {
+        setShowContextMenu(false);
+        setContextMenuCell(null);
+    }, []);
+
     // Global keyboard shortcuts and click handlers
     useEffect(() => {
         const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -142,34 +226,6 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             document.removeEventListener('click', handleGlobalClick);
         };
     }, [selectedCell, editingCell, copyCell, pasteCell, closeContextMenu]);
-
-    // Handle cell click
-    const handleCellClick = useCallback((cellId: string) => {
-        setSelectedCell(cellId);
-        setEditingCell(null);
-        const cell = cells.find(c => c.id === cellId);
-        if (cell) {
-            setEditValue(cell.value);
-        }
-    }, [cells]);
-
-    // Handle cell double click to edit
-    const handleCellDoubleClick = useCallback((cellId: string) => {
-        setEditingCell(cellId);
-        const cell = cells.find(c => c.id === cellId);
-        if (cell) {
-            setEditValue(cell.value);
-        }
-        setTimeout(() => inputRef.current?.focus(), 0);
-    }, [cells]);
-
-    // Handle cell value change
-    const handleCellValueChange = useCallback((cellId: string, newValue: string) => {
-        setCells(prev => prev.map(cell => 
-            cell.id === cellId ? { ...cell, value: newValue } : cell
-        ));
-        setEditValue(newValue);
-    }, []);
 
     // Handle edit confirm
     const handleEditConfirm = useCallback(() => {
@@ -714,7 +770,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             // Show suggestions for the new columns
             if (suggestions.length > 0) {
                 console.log(`Added ${count} columns. Suggested headers:`, 
-                    suggestions.slice(0, count).map(s => s.name).join(', '));
+                    suggestions.slice(0, count).map((s: any) => s.name).join(', '));
             }
         } catch (error) {
             console.error('Failed to get suggestions, adding blank columns:', error);
@@ -749,55 +805,6 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     const getCellByPosition = useCallback((row: number, col: number) => {
         return cells.find(cell => cell.row === row && cell.col === col);
     }, [cells]);
-
-    // Copy cell functionality
-    const copyCell = useCallback((cellId: string) => {
-        const cellValue = getCellValue(cellId);
-        setCopiedCell({ cellId, value: cellValue });
-        
-        // Copy to system clipboard as well
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(cellValue).catch(err => {
-                console.warn('Could not copy to clipboard:', err);
-            });
-        }
-        
-        console.log(`Copied cell ${cellId}: "${cellValue}"`);
-    }, [getCellValue]);
-
-    // Paste cell functionality
-    const pasteCell = useCallback((targetCellId: string) => {
-        if (copiedCell) {
-            handleCellValueChange(targetCellId, copiedCell.value);
-            console.log(`Pasted "${copiedCell.value}" to cell ${targetCellId}`);
-        } else {
-            // Try to paste from system clipboard
-            if (navigator.clipboard && navigator.clipboard.readText) {
-                navigator.clipboard.readText().then(text => {
-                    if (text) {
-                        handleCellValueChange(targetCellId, text);
-                        console.log(`Pasted from clipboard: "${text}" to cell ${targetCellId}`);
-                    }
-                }).catch(err => {
-                    console.warn('Could not read from clipboard:', err);
-                });
-            }
-        }
-    }, [copiedCell, handleCellValueChange]);
-
-    // Handle right-click context menu
-    const handleCellRightClick = useCallback((e: React.MouseEvent, cellId: string) => {
-        e.preventDefault();
-        setContextMenuCell(cellId);
-        setContextMenuPosition({ x: e.clientX, y: e.clientY });
-        setShowContextMenu(true);
-    }, []);
-
-    // Close context menu
-    const closeContextMenu = useCallback(() => {
-        setShowContextMenu(false);
-        setContextMenuCell(null);
-    }, []);
 
     return (
         <div className="h-screen bg-white flex flex-col">
