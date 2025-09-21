@@ -19,8 +19,10 @@ import {
     ArrowLeft,
     X,
     Upload,
-    FileText
+    FileText,
+    Search
 } from "lucide-react";
+import { searchCompanies, type Company } from "./lib/search-apis";
 
 interface Cell {
     id: string;
@@ -45,7 +47,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     const [editingCell, setEditingCell] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
     const [rows, setRows] = useState(20);
-    const [cols, setCols] = useState(10);
+    const [cols, setCols] = useState(12); // Increased to accommodate more company data columns
     const inputRef = useRef<HTMLInputElement>(null);
 
     // New state for column suggestions and menus
@@ -61,6 +63,11 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     const [selectedColumn, setSelectedColumn] = useState<number | null>(null);
     const [showColumnMenu, setShowColumnMenu] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+
+    // Query processing state
+    const [isProcessingQuery, setIsProcessingQuery] = useState(false);
+    const [queryResults, setQueryResults] = useState<any[]>([]);
+    const [queryHistory, setQueryHistory] = useState<string[]>([]);
 
     // Column headers (A, B, C, etc.)
     const getColumnHeader = useCallback((index: number): string => {
@@ -138,11 +145,187 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     // Handle key press in cell
     const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
+            // Check if this is a query (starts with natural language or specific patterns)
+            if (editValue && !editValue.startsWith('=') && editValue.length > 3) {
+                handleQuerySubmit(editValue);
+            } else {
             handleEditConfirm();
+            }
         } else if (e.key === 'Escape') {
             setEditingCell(null);
         }
-    }, [handleEditConfirm]);
+    }, [handleEditConfirm, editValue]);
+
+    // Handle query submission
+    const handleQuerySubmit = useCallback(async (query: string) => {
+        if (!query.trim()) return;
+
+        setIsProcessingQuery(true);
+        setQueryHistory(prev => [query, ...prev.slice(0, 9)]); // Keep last 10 queries
+
+        try {
+            // Determine query type
+            if (query.startsWith('=')) {
+                // Formula calculation
+                handleFormulaCalculation(query);
+            } else if (query.toLowerCase().includes('find') || query.toLowerCase().includes('search')) {
+                // Search query - integrate with existing search APIs
+                await handleSearchQuery(query);
+            } else {
+                // Direct value or company name
+                await handleDirectQuery(query);
+            }
+        } catch (error) {
+            console.error('Query processing error:', error);
+            // Show error in a cell or notification
+        } finally {
+            setIsProcessingQuery(false);
+        }
+    }, []);
+
+    // Handle formula calculations
+    const handleFormulaCalculation = useCallback((formula: string) => {
+        try {
+            // Simple formula parsing - extend as needed
+            if (formula.includes('SUM')) {
+                const match = formula.match(/SUM\(([A-Z]+\d+):([A-Z]+\d+)\)/);
+                if (match) {
+                    // Calculate sum of range
+                    const result = calculateSumRange(match[1], match[2]);
+                    if (selectedCell) {
+                        handleCellValueChange(selectedCell, result.toString());
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Formula calculation error:', error);
+        }
+    }, [selectedCell, handleCellValueChange]);
+
+    // Handle search queries - using same functionality as search screen
+    const handleSearchQuery = useCallback(async (query: string) => {
+        try {
+            // Use the same searchCompanies function as search screen
+            const companies = await searchCompanies(query);
+            
+            if (companies && companies.length > 0) {
+                // Convert Company objects to spreadsheet format
+                const formattedResults = companies.map(company => ({
+                    name: company.name,
+                    title: company.name,
+                    description: company.description,
+                    website: company.website,
+                    url: company.website,
+                    employees: company.employees,
+                    location: company.location,
+                    industry: company.industry,
+                    founded: company.founded,
+                    source: company.source,
+                    status: company.status
+                }));
+                
+                populateSpreadsheetWithResults(formattedResults);
+            }
+        } catch (error) {
+            console.error('Search query error:', error);
+        }
+    }, []);
+
+    // Handle direct queries (company names, etc.)
+    const handleDirectQuery = useCallback(async (query: string) => {
+        try {
+            // Try to enrich the query as a company name
+            const response = await fetch('/api/search/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: `${query} company information`, limit: 5 })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                    populateSpreadsheetWithResults(data.results);
+                } else {
+                    // Just put the value in the selected cell
+                    if (selectedCell) {
+                        handleCellValueChange(selectedCell, query);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Direct query error:', error);
+            // Fallback to just setting the value
+            if (selectedCell) {
+                handleCellValueChange(selectedCell, query);
+            }
+        }
+    }, [selectedCell, handleCellValueChange]);
+
+    // Populate spreadsheet with search results
+    const populateSpreadsheetWithResults = useCallback((results: any[]) => {
+        if (!results.length) return;
+
+        // Find the next empty row
+        let startRow = 0;
+        const usedCells = cells.filter(cell => cell.value.trim() !== '');
+        if (usedCells.length > 0) {
+            startRow = Math.max(...usedCells.map(cell => cell.row)) + 2; // Leave one empty row
+        }
+
+        // Ensure we have enough rows
+        const neededRows = startRow + results.length + 1;
+        if (neededRows > rows) {
+            setRows(neededRows);
+        }
+
+        // Add headers if starting from empty spreadsheet
+        if (startRow === 0) {
+            const headers = ['Company Name', 'Description', 'Website', 'Industry', 'Location', 'Employees', 'Founded', 'Source', 'Status'];
+            headers.forEach((header, colIndex) => {
+                const cellId = `${getColumnHeader(colIndex)}1`;
+                handleCellValueChange(cellId, header);
+            });
+            startRow = 1;
+        }
+
+        // Add results
+        results.forEach((result, index) => {
+            const row = startRow + index;
+            const data = [
+                result.name || result.title || 'Unknown',
+                result.description || result.snippet || '',
+                result.website || result.url || '',
+                result.industry || '',
+                result.location || '',
+                result.employees || '',
+                result.founded || '',
+                result.source || 'Search',
+                result.status || 'pending'
+            ];
+
+            data.forEach((value, colIndex) => {
+                const cellId = `${getColumnHeader(colIndex)}${row + 1}`;
+                handleCellValueChange(cellId, value.toString());
+            });
+        });
+
+        setQueryResults(results);
+    }, [cells, rows, getColumnHeader, handleCellValueChange]);
+
+    // Calculate sum of range (simple implementation)
+    const calculateSumRange = useCallback((start: string, end: string): number => {
+        // Parse cell references and calculate sum
+        // This is a simplified implementation
+        const startMatch = start.match(/([A-Z]+)(\d+)/);
+        const endMatch = end.match(/([A-Z]+)(\d+)/);
+        
+        if (!startMatch || !endMatch) return 0;
+
+        let sum = 0;
+        // Add logic to sum cells in range
+        // For now, return 0 as placeholder
+        return sum;
+    }, []);
 
     // Add new row
     const addRows = useCallback((count: number) => {
@@ -523,23 +706,98 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 </button>
             </div>
 
-            {/* Formula Bar */}
+            {/* Enhanced Query Bar - Web Search Enabled */}
             <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-white">
                 <div className="flex items-center gap-2 mr-4">
                     <span className="text-sm font-medium text-gray-700 w-12">
                         {selectedCell || "A1"}
                     </span>
-                    <Type className="w-4 h-4 text-gray-500" />
+                    <Search className="w-4 h-4 text-blue-500" />
                 </div>
+                <div className="flex-1 relative">
                 <input
                     type="text"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
                     onKeyDown={handleKeyPress}
                     onBlur={handleEditConfirm}
-                    className="flex-1 px-2 py-1 text-sm border-none outline-none"
-                    placeholder="Enter formula or value..."
-                />
+                        disabled={isProcessingQuery}
+                        className={`w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-all ${
+                            isProcessingQuery ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        placeholder="Search in the web... (e.g., 'Find companies in fintech', 'AI startups in healthcare', or specific company names)"
+                    />
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                        {isProcessingQuery && (
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-blue-600">
+                                <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                                Searching...
+                            </div>
+                        )}
+                        {editValue && !isProcessingQuery && (
+                            <button
+                                onClick={() => handleQuerySubmit(editValue)}
+                                className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            >
+                                <Search className="w-3 h-3" />
+                                Search Web
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Search Examples & Query History */}
+            <div className="px-4 py-2 bg-blue-50 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <span className="text-xs font-medium text-blue-700">Web Search Examples:</span>
+                        <div className="flex gap-2">
+                            {[
+                                "AI companies in healthcare",
+                                "fintech startups 2024",
+                                "SaaS companies in Europe",
+                                "renewable energy companies"
+                            ].map((example, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => {
+                                        setEditValue(example);
+                                        handleQuerySubmit(example);
+                                    }}
+                                    className="px-2 py-1 text-xs bg-white border border-blue-200 rounded hover:bg-blue-100 text-blue-700 whitespace-nowrap"
+                                >
+                                    {example}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    {queryResults.length > 0 && (
+                        <div className="text-xs text-green-600 font-medium">
+                            Last search: {queryResults.length} companies found
+                        </div>
+                    )}
+                </div>
+                
+                {queryHistory.length > 0 && (
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs font-medium text-gray-600">Recent:</span>
+                        <div className="flex gap-2 overflow-x-auto">
+                            {queryHistory.slice(0, 3).map((query, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => {
+                                        setEditValue(query);
+                                        handleQuerySubmit(query);
+                                    }}
+                                    className="px-2 py-1 text-xs bg-gray-200 border border-gray-300 rounded hover:bg-gray-300 whitespace-nowrap"
+                                >
+                                    {query.length > 25 ? query.substring(0, 25) + '...' : query}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Spreadsheet */}
