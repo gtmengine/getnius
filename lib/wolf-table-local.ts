@@ -17,6 +17,7 @@ export interface WolfTableConfig {
 export interface WolfTableStyle {
     bold?: boolean;
     italic?: boolean;
+    underline?: boolean;
     color?: string;
     backgroundColor?: string;
     fontSize?: number;
