@@ -26,12 +26,117 @@ import {
 } from "lucide-react";
 import { searchCompanies, type Company } from "../lib/search-apis";
 
-// Import Wolf Table - dynamic import to avoid SSR issues
+// Import local Wolf Table
+import { loadWolfTable, getWolfTable, isWolfTableLoaded } from "../lib/wolf-table-local";
+
 let WolfTable: any = null;
-if (typeof window !== 'undefined') {
-  import('@wolf-table/table').then((module) => {
-    WolfTable = module.default;
-  });
+
+// Text wrapping types and utilities
+type TextWrap = 'off' | 'wrap' | 'clip' | 'overflow';
+interface CellStyle {
+  font: string;
+  lineHeight: number;
+  padding: { t: number; r: number; b: number; l: number };
+  valign: 'top' | 'middle' | 'bottom';
+  halign: 'left' | 'center' | 'right';
+  direction: 'ltr' | 'rtl';
+  wrap: TextWrap;
+}
+
+type Measure = (s: string) => number;
+
+// Text wrapping implementation
+export function wrapLines(
+  text: string,
+  maxWidth: number,
+  measure: Measure,
+  opts?: { breakWord?: boolean }
+): string[] {
+  if (text === '') return [''];
+  
+  // 1 - build tokens: words plus spaces using Intl.Segmenter or regex
+  const seg = (Intl as any).Segmenter
+    ? Array.from(new (Intl as any).Segmenter(undefined, { granularity: 'word' }).segment(text)).map(x => x.segment)
+    : text.match(/(\s+|[^\s]+)/g) || [text];
+
+  const lines: string[] = [];
+  let line = '';
+  
+  for (const token of seg) {
+    const candidate = line ? line + token : token;
+    if (measure(candidate) <= maxWidth || token.trim() === '') {
+      line = candidate;
+      continue;
+    }
+    
+    if (!line) {
+      // single token longer than maxWidth
+      if (opts?.breakWord) {
+        // break by grapheme clusters
+        const clusters = [...token]; // spreads by code point, close enough
+        let buf = '';
+        for (const g of clusters) {
+          if (measure(buf + g) > maxWidth) {
+            if (buf) { lines.push(buf); buf = ''; }
+          }
+          buf += g;
+        }
+        if (buf) line = buf;
+      } else {
+        line = token; // will overflow minimally
+      }
+    } else {
+      lines.push(line);
+      line = token;
+    }
+  }
+  
+  if (line) lines.push(line);
+  // trim trailing spaces per line for nicer rendering
+  return lines.map(s => s.replace(/\s+$/, ''));
+}
+
+// Canvas rendering with text wrapping
+function renderCellWithWrap(
+  ctx: CanvasRenderingContext2D, 
+  rect: DOMRect, 
+  text: string, 
+  style: CellStyle
+) {
+  if (style.wrap !== 'wrap') {
+    // draw single line with clip/overflow
+    ctx.save();
+    ctx.font = style.font;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(text, rect.x + style.padding.l, rect.y + rect.height - style.padding.b);
+    ctx.restore();
+    return;
+  }
+
+  const usable = rect.width - style.padding.l - style.padding.r;
+  ctx.save();
+  ctx.font = style.font;
+  ctx.textBaseline = 'alphabetic';
+  
+  // handle RTL if needed
+  const lines = wrapLines(text, usable, s => ctx.measureText(s).width, { breakWord: true });
+  const totalH = lines.length * style.lineHeight;
+  let y = rect.y + style.padding.t;
+  
+  if (style.valign === 'middle') y = rect.y + (rect.height - totalH) / 2;
+  if (style.valign === 'bottom') y = rect.y + rect.height - totalH - style.padding.b;
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    let x = rect.x + style.padding.l;
+    const w = ctx.measureText(l).width;
+    
+    if (style.halign === 'center') x = rect.x + (rect.width - w) / 2;
+    if (style.halign === 'right') x = rect.x + rect.width - style.padding.r - w;
+    
+    ctx.fillText(l, x, y + (i + 0.8) * style.lineHeight); // 0.8 approximates baseline offset
+  }
+  ctx.restore();
 }
 
 interface Cell {
@@ -82,40 +187,105 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
     // Wolf Table state
     const tableRef = useRef<HTMLDivElement>(null);
     const tableInstanceRef = useRef<any>(null);
+    
+    // Text wrapping state with enhanced row height management
+    const [textWrapEnabled, setTextWrapEnabled] = useState(false);
+    const [cellStyles, setCellStyles] = useState<Map<string, CellStyle>>(new Map());
+    const [rowHeights, setRowHeights] = useState<Map<number, number>>(new Map());
+    const [layoutCache] = useState<Map<string, { lines: string[]; height: number }>>(new Map());
+    
+    // Compute required height for wrapped text
+    const computeWrappedHeight = useCallback((text: string, style: CellStyle, colWidth: number): number => {
+        const cacheKey = `${text}_${style.font}_${colWidth}_${style.wrap}`;
+        const cached = layoutCache.get(cacheKey);
+        if (cached) return cached.height;
+        
+        if (style.wrap !== 'wrap') {
+            const height = style.lineHeight + style.padding.t + style.padding.b;
+            layoutCache.set(cacheKey, { lines: [text], height });
+            return height;
+        }
+        
+        // Create temporary canvas for measuring
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!;
+        ctx.font = style.font;
+        
+        const usableWidth = colWidth - style.padding.l - style.padding.r;
+        const lines = wrapLines(text, usableWidth, s => ctx.measureText(s).width, { breakWord: true });
+        const height = lines.length * style.lineHeight + style.padding.t + style.padding.b;
+        
+        layoutCache.set(cacheKey, { lines, height });
+        return height;
+    }, [layoutCache]);
+    
+    // Update row height based on cell content with auto-resize
+    const updateRowHeight = useCallback((rowIndex: number) => {
+        if (!tableInstanceRef.current) return;
+        
+        let maxHeight = 28; // minimum row height (increased from 25)
+        
+        // Check all cells in this row for wrapped content
+        for (let col = 0; col < cols; col++) {
+            const cellKey = `${rowIndex}-${col}`;
+            const cellStyle = cellStyles.get(cellKey);
+            
+            if (cellStyle && cellStyle.wrap === 'wrap') {
+                // Get cell value from Wolf Table
+                try {
+                    const cellData = tableInstanceRef.current.cell(rowIndex, col);
+                    const text = cellData?.value || cellData || '';
+                    
+                    if (text && text.toString().trim()) {
+                        const colWidth = 120; // default column width - TODO: get from Wolf Table
+                        const requiredHeight = computeWrappedHeight(text.toString(), cellStyle, colWidth);
+                        maxHeight = Math.max(maxHeight, requiredHeight);
+                    }
+                } catch (error) {
+                    console.warn(`Could not get cell data for row ${rowIndex}, col ${col}:`, error);
+                }
+            }
+        }
+        
+        // Update row height if changed significantly
+        const currentHeight = rowHeights.get(rowIndex) || 28;
+        if (Math.abs(maxHeight - currentHeight) > 2) {
+            const newRowHeights = new Map(rowHeights);
+            newRowHeights.set(rowIndex, maxHeight);
+            setRowHeights(newRowHeights);
+            
+            // Apply to Wolf Table with debounced render
+            try {
+                tableInstanceRef.current.rowHeight(rowIndex, maxHeight);
+                console.log(`📏 Auto-resized row ${rowIndex} height: ${currentHeight}px → ${maxHeight}px`);
+                
+                // Debounced render to avoid excessive re-renders
+                setTimeout(() => {
+                    if (tableInstanceRef.current) {
+                        tableInstanceRef.current.render();
+                    }
+                }, 50);
+            } catch (error) {
+                console.warn(`Could not set row height for row ${rowIndex}:`, error);
+            }
+        }
+    }, [cols, cellStyles, rowHeights, computeWrappedHeight]);
 
     // Initialize Wolf Table
     useEffect(() => {
         const initTable = async () => {
             try {
-                console.log('Initializing Wolf Table...');
+                console.log('Initializing local Wolf Table...');
                 
                 if (tableRef.current && typeof window !== 'undefined') {
-                    // Import Wolf Table CSS
-                    const link = document.createElement('link');
-                    link.rel = 'stylesheet';
-                    link.href = 'https://unpkg.com/@wolf-table/table/dist/table.min.css';
-                    document.head.appendChild(link);
-
-                    // Wait for Wolf Table to load
-                    let attempts = 0;
-                    const maxAttempts = 50;
-                    
-                    const tryCreateTable = () => {
-                        if (WolfTable && tableRef.current) {
-                            createRealWolfTable();
-                        } else if (attempts < maxAttempts) {
-                            attempts++;
-                            setTimeout(tryCreateTable, 100);
-                        } else {
-                            console.log('Wolf Table not available, using mock...');
-                            createMockTable();
-                        }
-                    };
-                    
-                    tryCreateTable();
+                    // Load Wolf Table from local files
+                    WolfTable = await loadWolfTable();
+                    console.log('✅ Local Wolf Table loaded successfully');
+                    createRealWolfTable();
                 }
             } catch (error) {
-                console.error('Failed to initialize Wolf Table:', error);
+                console.error('Failed to load local Wolf Table:', error);
+                console.log('Falling back to mock table...');
                 createMockTable();
             }
         };
@@ -165,6 +335,29 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
             .merge('F10:G11')
             .merge('I10:K11')
             .formulaParser((v: string) => `${v}-formula`)
+            .cellRenderer((
+                ctx: CanvasRenderingContext2D,
+                rect: DOMRect,
+                row: number,
+                col: number,
+                cell: any,
+                style: any
+            ) => {
+                // Check if this cell has custom text wrapping
+                const cellKey = `${row}-${col}`;
+                const customStyle = cellStyles.get(cellKey);
+                
+                if (customStyle && customStyle.wrap === 'wrap') {
+                    const text = cell?.value || cell || '';
+                    if (text && text.toString().trim()) {
+                        renderCellWithWrap(ctx, rect, text.toString(), customStyle);
+                        return false; // Skip default rendering
+                    }
+                }
+                
+                // Use default rendering for non-wrapped cells
+                return true;
+            })
             .data({
                 styles: [],
                 cells: [
@@ -173,16 +366,16 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
                     [0, 1, 'COLUMN NAME'],
                     [0, 2, 'Enter a short, descriptive header for this column'],
                     
-                    // Data rows
-                    [1, 0, 'Entity to Research - Replace each placeholder with the company, product, or topic you need to look up.:'],
+                    // Data rows with longer text for wrapping demo
+                    [1, 0, 'Entity to Research - Replace each placeholder with the company, product, or topic you need to look up. This is a very long text that should wrap nicely within the cell boundaries.'],
                     [1, 1, 'Data Type (text/ url / email)'],
-                    [1, 2, 'Data Type - Specify the expected data format'],
+                    [1, 2, 'Data Type - Specify the expected data format for this column. This should also wrap if the text is long enough.'],
                     
-                    [2, 0, 'Prompt Details'],
+                    [2, 0, 'Prompt Details - Give detailed prompting instructions here. This text should wrap to multiple lines when text wrapping is enabled.'],
                     [2, 1, 'Prompt Details'],
-                    [2, 2, 'Prompt Details - Give prompting instructions'],
+                    [2, 2, 'Prompt Details - Give prompting instructions for better results.'],
                     
-                    [3, 0, 'Format Options'],
+                    [3, 0, 'Format Options - Define output formatting rules and constraints. This is another long text that demonstrates text wrapping functionality.'],
                     [3, 1, 'Format Options'],
                     [3, 2, 'Format Options - Define output formatting rules'],
                     
@@ -191,11 +384,11 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
                     [5, 1, 'Revenue'],
                     [5, 2, 'Employees'],
                     [5, 3, 'Industry'],
-                    [6, 0, 'OpenAI'],
+                    [6, 0, 'OpenAI - Artificial Intelligence Research Company'],
                     [6, 1, '$1.3B'],
                     [6, 2, '500+'],
                     [6, 3, 'AI/ML'],
-                    [7, 0, 'Anthropic'],
+                    [7, 0, 'Anthropic - AI Safety and Research Company'],
                     [7, 1, '$750M'],
                     [7, 2, '150+'],
                     [7, 3, 'AI Safety'],
@@ -887,56 +1080,115 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
                 
                 {/* Text Wrapping Controls */}
                 <button 
-                    className="p-2 hover:bg-gray-200 rounded border border-gray-300"
+                    className={`p-2 rounded border relative group ${
+                        textWrapEnabled 
+                            ? 'bg-blue-100 border-blue-300 hover:bg-blue-200' 
+                            : 'hover:bg-gray-200 border-gray-300'
+                    }`}
                     onClick={() => {
+                        console.log('🔧 Enhanced Wrap Text button clicked with auto-height');
+                        console.log('🔧 Current state:', textWrapEnabled);
+                        console.log('🔧 Selected cell:', selectedCell);
+                        
+                        // Toggle text wrapping state
+                        const newWrapState = !textWrapEnabled;
+                        setTextWrapEnabled(newWrapState);
+
+                        console.log('✅ Text wrapping toggled to:', newWrapState);
+
+                        if (!selectedCell) {
+                            console.log('ℹ️ No cell selected - applying to A1');
+                            return;
+                        }
+                        
+                        // Enhanced column letter to index conversion
+                        const colLetters = selectedCell.match(/^[A-Z]+/i)?.[0] || 'A';
+                        const rowNumber = parseInt(selectedCell.match(/\d+/)?.[0] || '1', 10) - 1;
+                        let colIndex = 0;
+                        for (let i = 0; i < colLetters.length; i++) {
+                            colIndex *= 26;
+                            colIndex += colLetters.charCodeAt(i) - 64; // A=1, B=2, etc.
+                        }
+                        colIndex -= 1; // Convert to zero-based
+
+                        console.log(`📍 Parsed cell: ${selectedCell} → Row ${rowNumber}, Col ${colIndex}`);
+
+                        // Enhanced cell style with improved defaults
+                        const newCellStyles = new Map(cellStyles);
+                        const enhancedStyle: CellStyle = {
+                            font: '12px Arial', // Slightly larger font
+                            lineHeight: 16, // Better line spacing
+                            padding: { t: 6, r: 8, b: 6, l: 8 }, // More generous padding
+                            valign: 'top', // Better for wrapped text
+                            halign: 'left',
+                            direction: 'ltr',
+                            wrap: newWrapState ? 'wrap' : 'off'
+                        };
+
+                        const cellKey = `${rowNumber}-${colIndex}`;
+                        newCellStyles.set(cellKey, { ...enhancedStyle });
+                        setCellStyles(newCellStyles);
+
+                        console.log(`📝 Applied style to cell ${cellKey}:`, enhancedStyle);
+
                         if (tableInstanceRef.current) {
-                            console.log('Wrap text button clicked');
-                            
-                            // Create comprehensive wrap style
-                            const wrapStyleId = tableInstanceRef.current.addStyle({
-                                wrap: true,
-                                align: 'left',
-                                fontSize: 10,
-                                color: '#333',
-                                verticalAlign: 'top',
-                                padding: '4px',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                overflow: 'hidden'
-                            });
-                            
-                            console.log('Created wrap style with ID:', wrapStyleId);
-                            
-                            // Apply to all cells that have content
-                            let cellsUpdated = 0;
-                            for (let row = 0; row <= 15; row++) {
-                                for (let col = 0; col <= 10; col++) {
-                                    try {
-                                        const currentCell = tableInstanceRef.current.cell(row, col);
-                                        if (currentCell && currentCell.value && String(currentCell.value).length > 10) {
-                                            tableInstanceRef.current.cell(row, col, { 
-                                                value: currentCell.value, 
-                                                style: wrapStyleId 
-                                            });
-                                            cellsUpdated++;
-                                            console.log(`Applied wrap to cell [${row},${col}]: ${currentCell.value.substring(0, 20)}...`);
-                                        }
-                                    } catch (e) {
-                                        // Skip cells that don't exist
-                                        continue;
-                                    }
+                            try {
+                                // Get existing cell data
+                                const existing = tableInstanceRef.current.cell(rowNumber, colIndex);
+                                const cellValue = existing?.value || existing || '';
+                                
+                                // Apply Wolf Table styling
+                                if (cellValue) {
+                                    const wolfStyle = {
+                                        wrap: newWrapState,
+                                        fontSize: 12,
+                                        color: '#333',
+                                        align: 'left',
+                                        valign: 'top',
+                                        padding: [6, 8, 6, 8] // [top, right, bottom, left]
+                                    };
+                                    
+                                    const styleId = tableInstanceRef.current.addStyle(wolfStyle);
+                                    tableInstanceRef.current.cell(rowNumber, colIndex, { 
+                                        value: cellValue, 
+                                        style: styleId 
+                                    });
+                                    
+                                    console.log(`🎨 Applied Wolf Table style ID ${styleId} to cell ${cellKey}`);
                                 }
+                                
+                                // Trigger row height update with auto-resize
+                                setTimeout(() => {
+                                    updateRowHeight(rowNumber);
+                                    console.log(`📏 Triggered auto-height update for row ${rowNumber}`);
+                                }, 10);
+                                
+                            } catch(err) { 
+                                console.error('❌ Error applying text wrap:', err);
                             }
-                            
-                            tableInstanceRef.current.render();
-                            console.log(`Text wrapping applied to ${cellsUpdated} cells`);
                         } else {
-                            console.log('Wolf Table not available');
+                            console.warn('⚠️ Wolf Table instance not available');
                         }
                     }}
-                    title="Wrap text in cells"
+                    title={`${textWrapEnabled ? 'Disable' : 'Enable'} text wrapping in cells`}
                 >
-                    <WrapText className="w-4 h-4 text-gray-600" />
+                    <WrapText className={`w-4 h-4 group-hover:text-blue-600 ${
+                        textWrapEnabled ? 'text-blue-600' : 'text-gray-600'
+                    }`} />
+                    
+                    {/* Enhanced Tooltip */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
+                        <div className="font-medium">
+                            {textWrapEnabled ? 'Disable' : 'Enable'} Text Wrapping
+                        </div>
+                        <div className="text-gray-300 mt-1">
+                            {textWrapEnabled 
+                                ? 'Text will display on single lines' 
+                                : 'Text will wrap within cell boundaries like Excel'
+                            }
+                        </div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                    </div>
                 </button>
             </div>
 
@@ -1050,7 +1302,7 @@ const Spreadsheet2Screen: React.FC<Spreadsheet2ScreenProps> = ({
                                 <div className="flex items-center gap-2">
                                     <div className={`w-3 h-3 rounded-full ${WolfTable ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
                                     <span className="text-xs text-gray-600">
-                                        {WolfTable ? 'Wolf Table Loaded' : 'Loading...'}
+                                        {WolfTable ? 'Local Wolf Table Loaded' : 'Loading from local files...'}
                                     </span>
                                 </div>
                             </div>

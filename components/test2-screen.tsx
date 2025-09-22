@@ -1,13 +1,10 @@
 import React, { useRef, useEffect } from "react";
 import { ArrowLeft, Grid3x3, Share, MessageSquare, Download, Upload } from "lucide-react";
 
-// Import Wolf Table - dynamic import to avoid SSR issues
+// Import local Wolf Table
+import { loadWolfTable, getWolfTable, isWolfTableLoaded } from "../lib/wolf-table-local";
+
 let WolfTable: any = null;
-if (typeof window !== 'undefined') {
-  import('@wolf-table/table').then((module) => {
-    WolfTable = module.default;
-  });
-}
 
 interface Test2ScreenProps {
     setCurrentScreen: (screen: string) => void;
@@ -21,35 +18,17 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
         // Initialize Wolf Table when component mounts
         const initTable = async () => {
             try {
-                console.log('Initializing Wolf Table...');
+                console.log('Initializing local Wolf Table...');
                 
                 if (tableRef.current && typeof window !== 'undefined') {
-                    // Import Wolf Table CSS
-                    const link = document.createElement('link');
-                    link.rel = 'stylesheet';
-                    link.href = 'https://unpkg.com/@wolf-table/table/dist/table.min.css';
-                    document.head.appendChild(link);
-
-                    // Wait for Wolf Table to load
-                    let attempts = 0;
-                    const maxAttempts = 50;
-                    
-                    const tryCreateTable = () => {
-                        if (WolfTable && tableRef.current) {
-                            createRealWolfTable();
-                        } else if (attempts < maxAttempts) {
-                            attempts++;
-                            setTimeout(tryCreateTable, 100);
-                        } else {
-                            console.log('Wolf Table not available, using mock...');
-                            createMockTable();
-                        }
-                    };
-                    
-                    tryCreateTable();
+                    // Load Wolf Table from local files
+                    WolfTable = await loadWolfTable();
+                    console.log('✅ Local Wolf Table loaded successfully');
+                    createRealWolfTable();
                 }
             } catch (error) {
-                console.error('Failed to initialize Wolf Table:', error);
+                console.error('Failed to load local Wolf Table:', error);
+                console.log('Falling back to mock table...');
                 createMockTable();
             }
         };
@@ -423,7 +402,7 @@ const Test2Screen: React.FC<Test2ScreenProps> = ({ setCurrentScreen }) => {
                     <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${WolfTable ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
                         <span className="text-xs text-gray-600">
-                            {WolfTable ? 'Real Wolf Table Loaded' : 'Loading Wolf Table...'}
+                            {WolfTable ? 'Local Wolf Table Loaded' : 'Loading from local files...'}
                         </span>
                     </div>
                 </div>

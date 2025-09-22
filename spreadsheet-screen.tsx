@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useReducer } from "react";
 import {
     Plus,
     MoreHorizontal,
@@ -24,14 +24,208 @@ import {
 } from "lucide-react";
 import { searchCompanies, type Company } from "./lib/search-apis";
 
-interface Cell {
-    id: string;
-    value: string;
-    row: number;
-    col: number;
-    isSelected: boolean;
-    isEditing: boolean;
-}
+// Wolf-table inspired sparse data model
+type CellKey = `${number}:${number}`;
+type CellVal = { 
+    value?: string | number; 
+    formula?: string; 
+    styleId?: number;
+    type?: 'text' | 'number' | 'formula' | 'date';
+};
+
+type CellStyle = {
+    fontSize?: number;
+    fontFamily?: string;
+    fontWeight?: 'normal' | 'bold';
+    fontStyle?: 'normal' | 'italic';
+    textDecoration?: 'none' | 'underline' | 'line-through';
+    color?: string;
+    backgroundColor?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    verticalAlign?: 'top' | 'middle' | 'bottom';
+    border?: string;
+    padding?: number;
+};
+
+type TableState = {
+    cells: Map<CellKey, CellVal>;
+    styles: CellStyle[];
+    rows: number;
+    cols: number;
+    selection: {
+        anchor: { row: number; col: number };
+        extent: { row: number; col: number };
+    };
+    editingCell: CellKey | null;
+    editValue: string;
+};
+
+type TableAction = 
+    | { type: 'setCell'; row: number; col: number; value: CellVal }
+    | { type: 'setCells'; cells: Array<{ row: number; col: number; value: CellVal }> }
+    | { type: 'addRows'; count: number }
+    | { type: 'addCols'; count: number }
+    | { type: 'insertCol'; position: number }
+    | { type: 'setSelection'; anchor: { row: number; col: number }; extent?: { row: number; col: number } }
+    | { type: 'setEditing'; cellKey: CellKey | null; value?: string }
+    | { type: 'loadCSV'; data: string[][] }
+    | { type: 'undo' }
+    | { type: 'redo' };
+
+type StateWithHistory = {
+    past: TableState[];
+    present: TableState;
+    future: TableState[];
+};
+
+// Helper functions
+const key = (row: number, col: number): CellKey => `${row}:${col}`;
+const parseKey = (cellKey: CellKey): [number, number] => {
+    const [row, col] = cellKey.split(':').map(Number);
+    return [row, col];
+};
+
+const getColumnName = (index: number): string => {
+    let result = '';
+    let num = index;
+    do {
+        result = String.fromCharCode(65 + (num % 26)) + result;
+        num = Math.floor(num / 26) - 1;
+    } while (num >= 0);
+    return result;
+};
+
+const getCellAddress = (row: number, col: number): string => {
+    return `${getColumnName(col)}${row + 1}`;
+};
+
+// Reducer for table state with undo/redo
+const tableReducer = (state: TableState, action: TableAction): TableState => {
+    switch (action.type) {
+        case 'setCell': {
+            const cellKey = key(action.row, action.col);
+            const newCells = new Map(state.cells);
+            if (action.value.value === '' && !action.value.formula) {
+                newCells.delete(cellKey);
+            } else {
+                newCells.set(cellKey, action.value);
+            }
+            return { ...state, cells: newCells };
+        }
+        
+        case 'setCells': {
+            const newCells = new Map(state.cells);
+            action.cells.forEach(({ row, col, value }) => {
+                const cellKey = key(row, col);
+                if (value.value === '' && !value.formula) {
+                    newCells.delete(cellKey);
+                } else {
+                    newCells.set(cellKey, value);
+                }
+            });
+            return { ...state, cells: newCells };
+        }
+        
+        case 'addRows':
+            return { ...state, rows: state.rows + action.count };
+            
+        case 'addCols':
+            return { ...state, cols: state.cols + action.count };
+            
+        case 'insertCol': {
+            const newCells = new Map<CellKey, CellVal>();
+            // Shift all cells after the insertion point
+            for (const [cellKey, cellVal] of state.cells) {
+                const [row, col] = parseKey(cellKey);
+                if (col >= action.position) {
+                    newCells.set(key(row, col + 1), cellVal);
+                } else {
+                    newCells.set(cellKey, cellVal);
+                }
+            }
+            return { 
+                ...state, 
+                cells: newCells, 
+                cols: state.cols + 1 
+            };
+        }
+        
+        case 'setSelection':
+            return {
+                ...state,
+                selection: {
+                    anchor: action.anchor,
+                    extent: action.extent || action.anchor
+                }
+            };
+            
+        case 'setEditing':
+            return {
+                ...state,
+                editingCell: action.cellKey,
+                editValue: action.value || ''
+            };
+            
+        case 'loadCSV': {
+            const newCells = new Map<CellKey, CellVal>();
+            const maxCols = Math.max(...action.data.map(row => row.length));
+            const newRows = action.data.length;
+            
+            action.data.forEach((row, rowIndex) => {
+                row.forEach((value, colIndex) => {
+                    if (value.trim()) {
+                        newCells.set(key(rowIndex, colIndex), { value });
+                    }
+                });
+            });
+            
+            return {
+                ...state,
+                cells: newCells,
+                rows: Math.max(state.rows, newRows),
+                cols: Math.max(state.cols, maxCols)
+            };
+        }
+        
+        default:
+            return state;
+    }
+};
+
+// Undo/Redo wrapper reducer
+const undoRedoReducer = (state: StateWithHistory, action: TableAction): StateWithHistory => {
+    switch (action.type) {
+        case 'undo':
+            if (state.past.length === 0) return state;
+            const previous = state.past[state.past.length - 1];
+            const newPast = state.past.slice(0, state.past.length - 1);
+            return {
+                past: newPast,
+                present: previous,
+                future: [state.present, ...state.future]
+            };
+            
+        case 'redo':
+            if (state.future.length === 0) return state;
+            const next = state.future[0];
+            const newFuture = state.future.slice(1);
+            return {
+                past: [...state.past, state.present],
+                present: next,
+                future: newFuture
+            };
+            
+        default:
+            const newPresent = tableReducer(state.present, action);
+            if (newPresent === state.present) return state;
+            
+            return {
+                past: [...state.past, state.present].slice(-50), // Keep last 50 states
+                present: newPresent,
+                future: [] // Clear future on new action
+            };
+    }
+};
 
 interface SpreadsheetScreenProps {
     setCurrentScreen: (screen: string) => void;
@@ -42,13 +236,35 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     setCurrentScreen, 
     initialData = [] 
 }) => {
-    const [cells, setCells] = useState<Cell[]>([]);
-    const [selectedCell, setSelectedCell] = useState<string | null>(null);
-    const [editingCell, setEditingCell] = useState<string | null>(null);
-    const [editValue, setEditValue] = useState("");
-    const [rows, setRows] = useState(20);
-    const [cols, setCols] = useState(12); // Increased to accommodate more company data columns
+    console.log('🔥 SpreadsheetScreen component rendering...', { setCurrentScreen: !!setCurrentScreen, initialData: initialData?.length });
+    
+    // Initialize state with sparse data model
+    const initialState: StateWithHistory = {
+        past: [],
+        present: {
+            cells: new Map(),
+            styles: [],
+            rows: 20,
+            cols: 12,
+            selection: {
+                anchor: { row: 0, col: 0 },
+                extent: { row: 0, col: 0 }
+            },
+            editingCell: null,
+            editValue: ''
+        },
+        future: []
+    };
+
+    const [state, dispatch] = useReducer(undoRedoReducer, initialState);
+    const { cells, rows, cols, selection, editingCell, editValue } = state.present;
+    
     const inputRef = useRef<HTMLInputElement>(null);
+    
+    // Derived state for easier access
+    const selectedCell = getCellAddress(selection.anchor.row, selection.anchor.col);
+    const canUndo = state.past.length > 0;
+    const canRedo = state.future.length > 0;
 
     // New state for column suggestions and menus
     const [columnSuggestions, setColumnSuggestions] = useState<any[]>([]);
@@ -69,76 +285,68 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     const [queryResults, setQueryResults] = useState<any[]>([]);
     const [queryHistory, setQueryHistory] = useState<string[]>([]);
 
-    // Column headers (A, B, C, etc.)
-    const getColumnHeader = useCallback((index: number): string => {
-        let result = '';
-        let num = index;
-        do {
-            result = String.fromCharCode(65 + (num % 26)) + result;
-            num = Math.floor(num / 26) - 1;
-        } while (num >= 0);
-        return result;
-    }, []);
-
-    // Initialize cells
+    // Initialize with sparse data if provided
     useEffect(() => {
-        const initialCells: Cell[] = [];
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
-                const cellId = `${getColumnHeader(col)}${row + 1}`;
-                
-                // Pre-populate with initial data if provided
-                let value = "";
-                if (initialData && initialData[row] && initialData[row][col]) {
-                    value = initialData[row][col].toString();
-                }
-                
-                initialCells.push({
-                    id: cellId,
-                    value,
-                    row,
-                    col,
-                    isSelected: false,
-                    isEditing: false
-                });
+        if (initialData && initialData.length > 0) {
+            const cellsToSet = initialData.flatMap((row: any[], rowIndex: number) => 
+                row.map((value: any, colIndex: number) => ({
+                    row: rowIndex,
+                    col: colIndex,
+                    value: { value: value?.toString() || '' }
+                })).filter((cell: any) => cell.value.value.trim() !== '')
+            );
+            
+            if (cellsToSet.length > 0) {
+                dispatch({ type: 'setCells', cells: cellsToSet });
             }
         }
-        setCells(initialCells);
-    }, [rows, cols, initialData]);
+    }, [initialData]);
 
-    // Handle cell click
-    const handleCellClick = useCallback((cellId: string) => {
-        setSelectedCell(cellId);
-        setEditingCell(null);
-        const cell = cells.find(c => c.id === cellId);
-        if (cell) {
-            setEditValue(cell.value);
-        }
+    // Get cell value from sparse map
+    const getCellValue = useCallback((row: number, col: number): string => {
+        const cellKey = key(row, col);
+        const cell = cells.get(cellKey);
+        return cell?.value?.toString() || '';
     }, [cells]);
+
+    // Handle cell click with new selection model
+    const handleCellClick = useCallback((row: number, col: number) => {
+        dispatch({ 
+            type: 'setSelection', 
+            anchor: { row, col }, 
+            extent: { row, col } 
+        });
+        dispatch({ type: 'setEditing', cellKey: null });
+    }, []);
 
     // Handle cell double click to edit
-    const handleCellDoubleClick = useCallback((cellId: string) => {
-        setEditingCell(cellId);
-        const cell = cells.find(c => c.id === cellId);
-        if (cell) {
-            setEditValue(cell.value);
-        }
+    const handleCellDoubleClick = useCallback((row: number, col: number) => {
+        const cellKey = key(row, col);
+        const cellValue = getCellValue(row, col);
+        dispatch({ 
+            type: 'setEditing', 
+            cellKey, 
+            value: cellValue 
+        });
         setTimeout(() => inputRef.current?.focus(), 0);
-    }, [cells]);
+    }, [getCellValue]);
 
-    // Handle cell value change
-    const handleCellValueChange = useCallback((cellId: string, newValue: string) => {
-        setCells(prev => prev.map(cell => 
-            cell.id === cellId ? { ...cell, value: newValue } : cell
-        ));
-        setEditValue(newValue);
+    // Handle cell value change with sparse updates
+    const handleCellValueChange = useCallback((row: number, col: number, newValue: string) => {
+        dispatch({ 
+            type: 'setCell', 
+            row, 
+            col, 
+            value: { value: newValue } 
+        });
     }, []);
 
     // Handle edit confirm
     const handleEditConfirm = useCallback(() => {
         if (editingCell) {
-            handleCellValueChange(editingCell, editValue);
-            setEditingCell(null);
+            const [row, col] = parseKey(editingCell);
+            handleCellValueChange(row, col, editValue);
+            dispatch({ type: 'setEditing', cellKey: null });
         }
     }, [editingCell, editValue, handleCellValueChange]);
 
@@ -152,7 +360,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             handleEditConfirm();
             }
         } else if (e.key === 'Escape') {
-            setEditingCell(null);
+            dispatch({ type: 'setEditing', cellKey: null });
         }
     }, [handleEditConfirm, editValue]);
 
@@ -192,19 +400,25 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             return;
         }
 
-        // Clear existing data and set headers in row 1
+        // Prepare all cells to set at once for better performance
+        const cellsToSet: Array<{ row: number; col: number; value: CellVal }> = [];
+        
+        // Set headers in row 0 (0-based indexing)
         const headers = ['Company', 'Description', 'Webpage', 'Industry'];
         console.log('📝 Setting headers:', headers);
         
         headers.forEach((header, colIndex) => {
-            const cellId = `${getColumnHeader(colIndex)}1`;
-            console.log(`📝 Setting header "${header}" in cell ${cellId}`);
-            handleCellValueChange(cellId, header);
+            cellsToSet.push({
+                row: 0,
+                col: colIndex,
+                value: { value: header }
+            });
+            console.log(`📝 Setting header "${header}" in cell ${getCellAddress(0, colIndex)}`);
         });
 
-        // Populate data starting from row 2
+        // Populate data starting from row 1 (0-based)
         results.forEach((result, index) => {
-            const row = index + 2; // Start from row 2 (row 1 is headers)
+            const row = index + 1; // Start from row 1 (row 0 is headers)
             const data = [
                 result.company || 'Unknown Company',
                 result.description || 'No description available',
@@ -212,28 +426,34 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 result.industry || 'Unknown Industry'
             ];
 
-            console.log(`📝 Row ${row} data:`, data);
+            console.log(`📝 Row ${row + 1} data:`, data); // +1 for display
 
             data.forEach((value, colIndex) => {
-                const cellId = `${getColumnHeader(colIndex)}${row}`;
-                console.log(`📝 Setting "${value}" in cell ${cellId}`);
-                handleCellValueChange(cellId, value.toString());
+                cellsToSet.push({
+                    row,
+                    col: colIndex,
+                    value: { value: value.toString() }
+                });
+                console.log(`📝 Setting "${value}" in cell ${getCellAddress(row, colIndex)}`);
             });
         });
+
+        // Batch update all cells
+        dispatch({ type: 'setCells', cells: cellsToSet });
 
         // Ensure we have enough rows
         const neededRows = results.length + 2; // +1 for header, +1 for buffer
         console.log(`📏 Current rows: ${rows}, needed: ${neededRows}`);
         if (neededRows > rows) {
             console.log(`📏 Expanding rows to ${neededRows}`);
-            setRows(neededRows);
+            dispatch({ type: 'addRows', count: neededRows - rows });
         }
 
         setQueryResults(results);
         console.log('✅ Population complete, results stored');
-    }, [getColumnHeader, handleCellValueChange, rows]);
+    }, [rows]);
 
-    // Handle formula calculations
+    // Handle formula calculations with new data model
     const handleFormulaCalculation = useCallback((formula: string) => {
         try {
             // Simple formula parsing - extend as needed
@@ -242,15 +462,14 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 if (match) {
                     // Calculate sum of range
                     const result = calculateSumRange(match[1], match[2]);
-                    if (selectedCell) {
-                        handleCellValueChange(selectedCell, result.toString());
-                    }
+                    const { row, col } = selection.anchor;
+                    handleCellValueChange(row, col, result.toString());
                 }
             }
         } catch (error) {
             console.error('Formula calculation error:', error);
         }
-    }, [selectedCell, handleCellValueChange]);
+    }, [selection.anchor, handleCellValueChange]);
 
     // Handle search queries - using Exa.ai API specifically
     const handleSearchQuery = useCallback(async (query: string) => {
@@ -322,9 +541,8 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 } else {
                     console.log('📝 No companies found, setting value in selected cell:', selectedCell);
                     // Just put the value in the selected cell
-                    if (selectedCell) {
-                        handleCellValueChange(selectedCell, query);
-                    }
+                    const { row, col } = selection.anchor;
+                    handleCellValueChange(row, col, query);
                 }
             } else {
                 console.log('❌ Direct query API response not ok:', response.status);
@@ -332,36 +550,39 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         } catch (error) {
             console.error('🚨 Direct query error:', error);
             // Fallback to just setting the value
-            if (selectedCell) {
-                console.log('📝 Fallback: setting value in selected cell:', selectedCell);
-                handleCellValueChange(selectedCell, query);
-            }
+            const { row, col } = selection.anchor;
+            console.log('📝 Fallback: setting value in selected cell:', selectedCell);
+            handleCellValueChange(row, col, query);
         }
-    }, [selectedCell, handleCellValueChange, populateSpreadsheetWithExaResults]);
+    }, [selection.anchor, handleCellValueChange, populateSpreadsheetWithExaResults]);
 
-    // Populate spreadsheet with search results
+    // Populate spreadsheet with search results (updated for sparse data)
     const populateSpreadsheetWithResults = useCallback((results: any[]) => {
         if (!results.length) return;
 
-        // Find the next empty row
+        // Find the next empty row by checking sparse data
         let startRow = 0;
-        const usedCells = cells.filter(cell => cell.value.trim() !== '');
-        if (usedCells.length > 0) {
-            startRow = Math.max(...usedCells.map(cell => cell.row)) + 2; // Leave one empty row
+        const maxRow = Math.max(...Array.from(cells.keys()).map(cellKey => {
+            const [row] = parseKey(cellKey);
+            return row;
+        }), -1);
+        
+        if (maxRow >= 0) {
+            startRow = maxRow + 2; // Leave one empty row
         }
 
-        // Ensure we have enough rows
-        const neededRows = startRow + results.length + 1;
-        if (neededRows > rows) {
-            setRows(neededRows);
-        }
+        // Prepare cells to set
+        const cellsToSet: Array<{ row: number; col: number; value: CellVal }> = [];
 
         // Add headers if starting from empty spreadsheet
         if (startRow === 0) {
             const headers = ['Company Name', 'Description', 'Website', 'Industry', 'Location', 'Employees', 'Founded', 'Source', 'Status'];
             headers.forEach((header, colIndex) => {
-                const cellId = `${getColumnHeader(colIndex)}1`;
-                handleCellValueChange(cellId, header);
+                cellsToSet.push({
+                    row: 0,
+                    col: colIndex,
+                    value: { value: header }
+                });
             });
             startRow = 1;
         }
@@ -382,13 +603,25 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             ];
 
             data.forEach((value, colIndex) => {
-                const cellId = `${getColumnHeader(colIndex)}${row + 1}`;
-                handleCellValueChange(cellId, value.toString());
+                cellsToSet.push({
+                    row,
+                    col: colIndex,
+                    value: { value: value.toString() }
+                });
             });
         });
 
+        // Batch update all cells
+        dispatch({ type: 'setCells', cells: cellsToSet });
+
+        // Ensure we have enough rows
+        const neededRows = startRow + results.length + 1;
+        if (neededRows > rows) {
+            dispatch({ type: 'addRows', count: neededRows - rows });
+        }
+
         setQueryResults(results);
-    }, [cells, rows, getColumnHeader, handleCellValueChange]);
+    }, [cells, rows]);
 
     // Calculate sum of range (simple implementation)
     const calculateSumRange = useCallback((start: string, end: string): number => {
@@ -405,19 +638,35 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         return sum;
     }, []);
 
+    // Add keyboard shortcuts for undo/redo
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                dispatch({ type: 'undo' });
+            } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                dispatch({ type: 'redo' });
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     // Add new row
     const addRows = useCallback((count: number) => {
-        setRows(prev => prev + count);
+        dispatch({ type: 'addRows', count });
     }, []);
 
     // Add new column
     const addColumns = useCallback((count: number) => {
-        setCols(prev => prev + count);
+        dispatch({ type: 'addCols', count });
     }, []);
 
     // Add multiple columns at once
     const addMultipleColumns = useCallback((count: number) => {
-        setCols(prev => prev + count);
+        dispatch({ type: 'addCols', count });
         console.log(`Added ${count} columns`);
     }, []);
 
@@ -486,31 +735,8 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
     };
 
     const loadCSVIntoSpreadsheet = (data: string[][]) => {
-        const maxCols = Math.max(...data.map(row => row.length));
-        const newRows = data.length;
-        
-        // Ensure we have enough columns and rows
-        if (maxCols > cols) setCols(maxCols);
-        if (newRows > rows) setRows(newRows);
-
-        // Create new cells with CSV data
-        const newCells: Cell[] = [];
-        
-        for (let row = 0; row < newRows; row++) {
-            for (let col = 0; col < maxCols; col++) {
-                const value = data[row]?.[col] || '';
-                newCells.push({
-                    id: `${row}-${col}`,
-                    value: value,
-                    row: row,
-                    col: col,
-                    isSelected: false,
-                    isEditing: false
-                });
-            }
-        }
-
-        setCells(newCells);
+        // Use the new loadCSV action for proper state management
+        dispatch({ type: 'loadCSV', data });
     };
 
     const clearCSVData = () => {
@@ -521,24 +747,10 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         }
     };
 
-    // Insert column at specific position
+    // Insert column at specific position with proper cell shifting
     const insertColumnAt = (position: number) => {
-        setCols(prev => prev + 1);
-        
-        // Update existing cells to shift columns after insertion point
-        setCells(prev => prev.map(cell => {
-            if (cell.col >= position) {
-                // Shift cells to the right
-                return {
-                    ...cell,
-                    col: cell.col + 1,
-                    id: `${getColumnHeader(cell.col + 1)}${cell.row + 1}`
-                };
-            }
-            return cell;
-        }));
-        
-        console.log(`Inserted column at position ${position} (after ${getColumnHeader(position - 1)})`);
+        dispatch({ type: 'insertCol', position });
+        console.log(`Inserted column at position ${position} (after ${getColumnName(position - 1)})`);
     };
 
     // Add column after specific column (by letter)
@@ -554,13 +766,13 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         
         try {
             // Get existing column names
-            const existingColumns = Array.from({ length: cols }, (_, index) => getColumnHeader(index));
+            const existingColumns = Array.from({ length: cols }, (_, index) => getColumnName(index));
             
             // Analyze current data for context
-            const dataContext = cells
+            const dataContext = Array.from(cells.values())
                 .filter(cell => cell.value)
                 .slice(0, 20)
-                .map(cell => cell.value)
+                .map(cell => cell.value?.toString() || '')
                 .join(", ");
                 
             const response = await fetch('/api/column-suggestions', {
@@ -593,13 +805,13 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         } finally {
             setLoadingSuggestions(false);
         }
-    }, [cols, cells, getColumnHeader]);
+    }, [cols, cells]);
 
     // Add columns with suggestions
     const addColumnsWithSuggestions = useCallback(async (count: number) => {
         try {
             // Get suggestions first
-            const existingColumns = Array.from({ length: cols }, (_, index) => getColumnHeader(index));
+            const existingColumns = Array.from({ length: cols }, (_, index) => getColumnName(index));
             const response = await fetch('/api/column-suggestions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -623,14 +835,14 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
             // Show suggestions for the new columns
             if (suggestions.length > 0) {
                 console.log(`Added ${count} columns. Suggested headers:`, 
-                    suggestions.slice(0, count).map(s => s.name).join(', '));
+                    suggestions.slice(0, count).map((s: any) => s.name).join(', '));
             }
         } catch (error) {
             console.error('Failed to get suggestions, adding blank columns:', error);
             // Fallback to just adding blank columns
             addMultipleColumns(count);
         }
-    }, [cols, getColumnHeader, addMultipleColumns]);
+    }, [cols, addMultipleColumns]);
 
     // Function to apply a suggestion
     const applySuggestion = useCallback((suggestion: any) => {
@@ -641,13 +853,15 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
         console.log(`Added column: ${suggestion.name} - ${suggestion.description}`);
     }, [addColumns]);
 
-    // Get cell by position
+    // Get cell by position (now just returns the cell value)
     const getCellByPosition = useCallback((row: number, col: number) => {
-        return cells.find(cell => cell.row === row && cell.col === col);
-    }, [cells]);
+        return getCellValue(row, col);
+    }, [getCellValue]);
 
-    return (
-        <div className="h-screen bg-white flex flex-col">
+    try {
+        console.log('🔥 SpreadsheetScreen about to render JSX...');
+        return (
+            <div className="h-screen bg-white flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
                 <div className="flex items-center gap-4">
@@ -737,10 +951,20 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 
                 <div className="w-px h-6 bg-gray-300 mx-2" />
                 
-                <button className="p-1 hover:bg-gray-200 rounded">
+                <button 
+                    className={`p-1 rounded ${canUndo ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed'}`}
+                    onClick={() => dispatch({ type: 'undo' })}
+                    disabled={!canUndo}
+                    title={`Undo (Ctrl+Z)${canUndo ? '' : ' - No actions to undo'}`}
+                >
                     <Undo className="w-4 h-4 text-gray-600" />
                 </button>
-                <button className="p-1 hover:bg-gray-200 rounded">
+                <button 
+                    className={`p-1 rounded ${canRedo ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed'}`}
+                    onClick={() => dispatch({ type: 'redo' })}
+                    disabled={!canRedo}
+                    title={`Redo (Ctrl+Y)${canRedo ? '' : ' - No actions to redo'}`}
+                >
                     <Redo className="w-4 h-4 text-gray-600" />
                 </button>
                 
@@ -796,7 +1020,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 <input
                     type="text"
                     value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
+                    onChange={(e) => dispatch({ type: 'setEditing', cellKey: editingCell, value: e.target.value })}
                     onKeyDown={handleKeyPress}
                     onBlur={handleEditConfirm}
                         disabled={isProcessingQuery}
@@ -840,7 +1064,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                 <button
                                     key={index}
                                     onClick={() => {
-                                        setEditValue(example);
+                                        dispatch({ type: 'setEditing', cellKey: editingCell, value: example });
                                         handleQuerySubmit(example);
                                     }}
                                     className="px-2 py-1 text-xs bg-white border border-blue-200 rounded hover:bg-blue-100 text-blue-700 whitespace-nowrap"
@@ -865,7 +1089,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                 <button
                                     key={index}
                                     onClick={() => {
-                                        setEditValue(query);
+                                        dispatch({ type: 'setEditing', cellKey: editingCell, value: query });
                                         handleQuerySubmit(query);
                                     }}
                                     className="px-2 py-1 text-xs bg-gray-200 border border-gray-300 rounded hover:bg-gray-300 whitespace-nowrap"
@@ -900,7 +1124,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                     }}
                                     onClick={() => setSelectedColumn(index)}
                                 >
-                                    {getColumnHeader(index)}
+                                    {getColumnName(index)}
                                     
                                     {/* Dropdown arrow on hover */}
                                     <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1004,10 +1228,10 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                             
                             {/* Cells */}
                             {Array.from({ length: cols }, (_, colIndex) => {
-                                const cell = getCellByPosition(rowIndex, colIndex);
-                                const cellId = `${getColumnHeader(colIndex)}${rowIndex + 1}`;
-                                const isSelected = selectedCell === cellId;
-                                const isEditing = editingCell === cellId;
+                                const cellValue = getCellByPosition(rowIndex, colIndex);
+                                const cellAddress = getCellAddress(rowIndex, colIndex);
+                                const isSelected = selection.anchor.row === rowIndex && selection.anchor.col === colIndex;
+                                const isCurrentlyEditing = editingCell === key(rowIndex, colIndex);
                                 
                                 return (
                                     <div
@@ -1015,22 +1239,22 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                                         className={`w-24 h-8 border-r border-b border-gray-300 relative ${
                                             isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
                                         }`}
-                                        onClick={() => handleCellClick(cellId)}
-                                        onDoubleClick={() => handleCellDoubleClick(cellId)}
+                                        onClick={() => handleCellClick(rowIndex, colIndex)}
+                                        onDoubleClick={() => handleCellDoubleClick(rowIndex, colIndex)}
                                     >
-                                        {isEditing ? (
+                                        {isCurrentlyEditing ? (
                                             <input
                                                 ref={inputRef}
                                                 type="text"
                                                 value={editValue}
-                                                onChange={(e) => setEditValue(e.target.value)}
+                                                onChange={(e) => dispatch({ type: 'setEditing', cellKey: editingCell, value: e.target.value })}
                                                 onKeyDown={handleKeyPress}
                                                 onBlur={handleEditConfirm}
                                                 className="w-full h-full px-1 text-xs border-none outline-none bg-white"
                                             />
                                         ) : (
                                             <div className="w-full h-full px-1 flex items-center text-xs text-gray-900 overflow-hidden">
-                                                {cell?.value || ""}
+                                                {cellValue}
                                             </div>
                                         )}
                                     </div>
@@ -1158,7 +1382,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                             className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                         >
                             <Plus className="w-4 h-4" />
-                            Insert column before {getColumnHeader(selectedColumn)}
+                            Insert column before {getColumnName(selectedColumn)}
                         </button>
                         
                         <button
@@ -1169,7 +1393,7 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                             className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                         >
                             <Plus className="w-4 h-4" />
-                            Insert column after {getColumnHeader(selectedColumn)}
+                            Insert column after {getColumnName(selectedColumn)}
                         </button>
                         
                         {/* Special highlight for column J */}
@@ -1203,7 +1427,25 @@ const SpreadsheetScreen: React.FC<SpreadsheetScreenProps> = ({
                 </>
             )}
         </div>
-    );
+        );
+    } catch (error) {
+        console.error('🚨 SpreadsheetScreen render error:', error);
+        return (
+            <div className="h-screen bg-white flex items-center justify-center">
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold text-red-600">Spreadsheet Error</h1>
+                    <p className="text-gray-600 mt-2">An error occurred while rendering the spreadsheet.</p>
+                    <p className="text-sm text-gray-500 mt-1">Check the console for details.</p>
+                    <button
+                        onClick={() => setCurrentScreen("action")}
+                        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
 };
 
 SpreadsheetScreen.displayName = "SpreadsheetScreen";

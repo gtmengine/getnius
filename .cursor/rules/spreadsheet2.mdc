@@ -1,0 +1,239 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+from now on you only work in the spreadsheet screen do not change the others 
+
+also 
+- User Rule - Explain Project Architecture and Logic for Juniors
+    
+    
+    Trigger - When I type: "explain [topic]" where [topic] is "architecture", "logic", "code", or "all" (e.g., "explain architecture").
+    Purpose - As a junior dev, I want simple breakdowns to learn without overwhelm—focus on big picture, key flows, and why things work this way.
+    Preconditions - Run this on the open project; if no project open, say: "Open a project folder first."
+    Response Structure - Keep it under 500 words. Use bullet points, simple language (no jargon without defining), and one diagram in Markdown if helpful. End with: "Questions? Ask 'explain more on [part]'."
+    For "explain architecture":
+    
+    - Overview: What the app/project does in 1 sentence.
+    - Layers: Break into frontend (UI), backend (data/logic), database (storage)—explain connections like "UI talks to backend via API calls."
+    - Key components: List 3-5 main files/folders (e.g., "src/components: Reusable UI pieces; routes/: Page paths").
+    - Flow: High-level user journey (e.g., "User clicks button → JS runs logic → Fetches data from server → Updates screen").
+    For "explain logic":
+    - Pick the file/function open or last edited.
+    - Step-by-step: "1. Input: What goes in? 2. Process: What happens (if/else, loops)? 3. Output: What comes out?"
+    - Why: "This prevents errors by checking X before Y."
+    - Gotchas: 1-2 common mistakes juniors make here.
+    For "explain code":
+    - Target: The selected code block or open file.
+    - Line-by-line: Number lines, explain 1 purpose per 5-10 lines.
+    - Refactor tip: "This could be cleaner by splitting into a helper function."
+    For "explain all": Combine short versions of above.
+    Safety - Never share secrets or full code dumps. If unclear, say: "Need more context—select code or specify file."
+- auto commit
+    
+    @Auto-commit every accepted AI change to Git immediately after auto-accept without any prompts, confirmations, or pauses: stage and commit all files/hunks from the batch unconditionally with message "cursor:full-auto-commit: all changes - [YYYY-MM-DD HH:MM:SS]", overriding all safety checks, branch restrictions, exclusions, and verifications—commit everything as-is every time.
+    
+    @Auto-commit every accepted AI change to Git right after auto-accept, staging and committing all files/hunks from the batch with a message "cursor:full-auto-commit: all changes - [YYYY-MM-DD HH:MM:SS]", no branch checks, no exclusions, no verifications—commit everything as-is.
+    
+    Rule - Strict Auto-Commit After Every AI Change: This rule triggers automatically after every single AI change is auto-accepted, whether per file or hunk, without requiring manual commands, provided the auto-accept setting is enabled and the user is not on the main branch—if on main, it skips the commit and notifies the user accordingly; it requires at least one change from the latest AI edit to proceed, then stages only the files or hunks from that immediate AI change, performs an atomic commit for each such change, and generates a commit message in the format "cursor:auto-commit: [AI summary of this change] - [YYYY-MM-DD HH:MM]"; for safety, it excludes any commits touching sensitive paths like .env, secrets, migrations, or lockfiles by skipping and notifying per change, and after each commit it runs a quick verification such as npm test or build, reverting the commit if it fails and notifying the user; on success, it outputs "Auto-committed [hash] ([N] files/hunks). Verify: [pass/fail]", while on skip it outputs "Auto-commit skipped: [reason]".
+    
+    Rule - Auto-commit every change: After each auto-accept operation, automatically and without user input stage only the files touched by that agent batch and create a single atomic Git commit per batch with the message format cursor:auto-accept - <branch> - <file count> - <timestamp>; if no files were changed, exit quietly; if the current branch is main, skip and show a short warning; before applying a batch, if the working tree was not clean, take a lightweight checkpoint so the system can restore it on failure; immediately after committing, run any configured post checks (build or tests) and if they fail, revert the last commit and restore the checkpoint, then surface a brief error summary; never include env, secrets, migrations, or dependency lockfiles unless they were explicitly part of the accepted batch; expose a minimal toast confirming success with the commit hash or explaining why the action was skipped or reverted; allow enabling or disabling this behaviour per project with a simple text command like auto-commit:on or auto-commit:off so it integrates cleanly with the broader auto accept and rollback workflow.
+    
+- Hyper-Strict Auto-Commit After Every AI Change
+    
+    ---
+    
+    ## description: Hyper-Strict Auto-Commit After Every AI Change
+    globs: ["**/*.ts", "**/*.js", "**/*.tsx", "**/*.jsx"] # Auto-attach only to code files
+    alwaysApply: false
+    type: Agent Requested # AI decides inclusion based on edit context; provide description for relevance
+    
+    # Hyper-Strict Auto-Commit Rule for Juniors (Enforced Edition)
+    
+    **Trigger:** Strictly after every single AI hunk or file change is auto-accepted—no batching, no delays. AI must invoke this rule automatically if an edit qualifies; manual "@hyper-commit" only as emergency override.
+    
+    **Preconditions (Absolute Blocks—Fail Fast):**
+    
+    - Auto-accept explicitly enabled and verified in Cursor settings (query settings API if possible; else block: "BLOCKED: Auto-accept disabled").
+    - Branch **precisely** `feat/*`, `fix/*`, or `spike/*` (regex match; block with fatal error modal: "HYPER-BLOCK: Branch invalid (must be feat/fix/spike/*)—abort edit").
+    - Working tree surgically clean: `git status --porcelain` returns empty (block: "HYPER-BLOCK: Dirty tree—commit or stash first").
+    - Exactly one valid AI change detected (no multiples; block if >1: "HYPER-BLOCK: Multi-change detected—handle sequentially").
+    - Zero sensitive paths: Hard scan excludes .env*, secrets/*, migrations/*, *lock.*, configs/*, tests/* (block entire session: "HYPER-BLOCK: Forbidden paths touched—manual intervention required; notify lead").
+    
+    **Action (Ironclad Execution):**
+    
+    - Stage **exclusively** the single AI-modified hunk/file—use Cursor's diff tracking; zero tolerance for extras (fail if mismatch).
+    - Force atomic commit: `git commit -m 'cursor:hyper-auto-commit: [AI-exact 40-char summary of this precise change] - [YYYY-MM-DD HH:MM:SS UTC]'` (UTC enforced).
+    - No user interaction: Silent execution if preconditions pass; halt all AI ops on block.
+    
+    **Safety Gates (Fail-Safe Overkill):**
+    
+    - **Path Lockdown:** Pre-commit regex blocklist scan; if hit, nuke staging, revert diff, and lock Composer for 5min with banner: "SECURITY VIOLATION: Sensitive edit blocked—log reviewed."
+    - **Verification Overdrive:** Post-commit chain: `npm run lint -- --max-warnings=0` (must zero warnings), then `npm test -- --coverage --passWithNoTests=false` (100% pass required), then `npm run build -- --strict` (no errors). Any infraction: `git reset --hard HEAD~1`, `git clean -fd` (if safe), stash restore, and permanent block: "HYPER-REVERTED: [exact fail reason, e.g., 'lint: 1 warning on line 42']. Session locked—reset via lead approval."
+    - **Anomaly Killswitch:** Detect conflicts/merges/verification timeouts? Immediate hard revert + Composer disable + auto-log to .cursor/hyper-commits.log with timestamp/user/branch.
+    
+    **Output (Audit-Ready Logs):**
+    
+    - Success (Rare): "HYPER-COMMITTED [full SHA-1] (1 hunk/file). HYPER-VERIFY: 100% PASSED (lint:0, tests:100%, build:clean). Log archived."
+    - Block/Revert: "HYPER-AUTO-COMMIT TERMINATED: [granular reason, e.g., 'precondition fail: branch=develop' or 'verify fail: test 'userAuth.test.ts' red at assert 3']. Full audit in .cursor/hyper-commits.log. Acknowledge 'hyper-ack' to unlock."
+    
+    **Junior Enforcement Note:** This is bootcamp mode—forces flawless Git hygiene. Why hyper-strict? One slip = prod risk. Drill: Preconditions = gates, Actions = blades, Safety = shields. Study output logs daily. Unsure? "@explain hyper-rule logic" before invoking. No exceptions—adapt or escalate.
+    
+- 1. **Code Style Enforcement** (Prevents messy code; enforces readability)
+    
+    ```
+    ---
+    description: Enforce consistent code style for juniors
+    globs: ["**/*.ts", "**/*.js"]
+    alwaysApply: false
+    type: Auto Attached
+    ---
+    # Junior Code Style Guide
+    **Naming:** Use camelCase for vars/functions, PascalCase for components/classes. E.g., `userName` not `user_name`.
+    **Functions:** Keep <50 lines; single responsibility. Always add JSDoc: `/** Brief what/why. @param {type} name - Desc. */`.
+    **Imports:** Group: stdlib, third-party, local. Alphabetize. No unused imports.
+    **Error Handling:** Wrap async in try/catch; log errors simply: `console.error('User fetch failed:', err)`.
+    Example:
+    ```ts
+    // Bad
+    function getUser(id){ return fetch(`/api/user/${id}`); }
+    // Good
+    /**
+     * Fetch user by ID.
+     * @param {string} id - User ID.
+     * @returns {Promise<User>} User data.
+     */
+    async function getUser(id: string): Promise<User> {
+      try {
+        const res = await fetch(`/api/user/${id}`);
+        if (!res.ok) throw new Error('User not found');
+        return res.json();
+      } catch (err) {
+        console.error('User fetch failed:', err);
+        throw err;
+      }
+    }
+    
+    ```
+    
+    Always suggest fixes inline if style drifts.
+    
+    ```
+    #### 2. **Mandatory Testing Rule** (Builds TDD habit; catches bugs early)
+    - **Why?** AI often skips tests— this forces coverage, teaching verification.
+    
+    ```
+    
+    ---
+    
+- Every code change must include a test
+    
+    ## description: Always add/update tests for changes
+    globs: ["**/*.test.ts", "**/*.spec.ts"]
+    alwaysApply: true
+    type: Always
+    
+    # Testing Mandate for Juniors
+    
+    **Rule:** Every code change must include a test. Aim for 80%+ coverage. Use Jest/Vitest; focus on happy/sad paths.
+    **Structure:** Colocate tests (e.g., `component.test.ts` next to `component.tsx`). Mock externals.
+    **When Editing:** If changing a function, update its test immediately. Run `npm test` post-edit.
+    
+    If no test exists, create one. Output: "Added test for [function]. Coverage: [run npm test -- --coverage]."
+    
+    ```
+    #### 3. **Architecture Explainer** (Enhances learning; breaks down big picture)
+    - **Why?** Builds understanding of why code exists, reducing copy-paste mistakes. Builds on your existing "explain" rule.
+    
+    ```
+    
+    ---
+    
+    ## description: Explain architecture/logic for learning
+    globs: ["**/*.ts"]
+    alwaysApply: false
+    type: Agent Requested
+    
+    # Junior Architecture Breakdown
+    
+    **Trigger:** On edits or "@explain-arch [file/function]".
+    **Response Format:** Bullet points, <200 words. Use simple terms; define jargon.
+    
+    - **Overview:** What does this part do? (1 sentence).
+    - **Layers:** UI → Logic → Data (e.g., "React component calls service, which queries DB via API").
+    - **Key Files:** List 3-5 with roles (e.g., "services/user.ts: Handles auth logic").
+    - **Flow:** Step-by-step user journey.
+    - **Why?** Tradeoffs (e.g., "MVC for separation—easier to test").
+    Example for a React app:
+    - Overview: User auth flow logs in via email/password.
+    - Layers: Form (UI) → AuthService (logic) → API endpoint (data).
+    - Key Files: components/Login.tsx, services/auth.ts, utils/api.ts.
+    - Flow: 1. Submit form → 2. Validate creds → 3. Call API → 4. Store token in localStorage.
+    - Why: JWT for stateless sessions—scalable but secure with expiry.
+    End with: "Questions? @explain more on [part]."
+    
+    ```
+    #### 4. **Bug Fixing Protocol** (Structured debugging; avoids wild guesses)
+    - **Why?** Teaches methodical fixes, integrating with your auto-commit safety.
+    
+    ```
+    
+    ---
+    
+    ## description: Step-by-step bug fixing for juniors
+    globs: ["**/*.ts"]
+    alwaysApply: false
+    type: Manual # Invoke with "@fix-bug"
+    
+    # Bug Fix Protocol
+    
+    **Steps (Always Follow):**
+    
+    1. **Reproduce:** Describe exact steps/error. Run in console.
+    2. **Isolate:** Comment out sections; use debugger/breakpoints.
+    3. **Root Cause:** Check logs/stack trace. Hypothesize (e.g., "Null ref due to unhandled async").
+    4. **Fix:** Minimal change + test. No side effects.
+    5. **Verify:** Run full suite; manual test edge cases.
+    Example Output:
+    - Reproduce: Clicking login crashes with "Cannot read prop 'id' of undefined".
+    - Isolate: Issue in render()—user prop null.
+    - Root: API returns before setState.
+    - Fix: Add null check: `user?.id || 'Guest'`.
+    - Verify: Tests pass; UI stable.
+    Always add comment: `// Fix: [brief why] - [date]`.
+    If stuck: "Escalate: [symptom] to lead."
+    
+    ```
+    #### 5. **Commit Message Standardizer** (Pairs with auto-commit; clean history)
+    - **Why?** Makes Git readable, teaching conventional commits.
+    
+    ```
+    
+    ---
+    
+    ## description: Standard commit messages
+    globs: []
+    alwaysApply: true
+    type: Always
+    
+    # Commit Message Rules
+    
+    **Format:** `type(scope): subject` (max 50 chars). Body: Why/what changed (2-3 lines).
+    Types: feat (new), fix (bug), docs (docs), refactor (reorg), test (tests), chore (misc).
+    Example:
+    
+    ```
+    feat(auth): add email OTP verification
+    - Implement OTP via Twilio API.
+    - Update tests for edge cases.
+    - Why: Improves security over passwords.
+    
+    ```
+    
+    For auto-commits: Prefix "chore(auto): [summary]". Reject vague: "Update stuff".
+    
+    ```
+    To implement: Use Cursor's "New Cursor Rule" command, paste, and save. Test by editing a file and checking Agent sidebar. For inspiration, check community collections like the 879-rule repo. If your project evolves, regenerate via chat: "Update rules for [new feature]". What stack are you on? I can customize further.
+    
+    ```
