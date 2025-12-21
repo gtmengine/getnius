@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Search, TrendingUp, Database, BarChart3, ArrowRight, CheckCircle, Zap, Shield, Globe, History, Settings, Upload, Share2, Loader2, X, FileSpreadsheet, DownloadCloud, Plus, ChevronDown, LogIn, LogOut, User } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -27,7 +28,7 @@ import { searchWithExtruct, type Company } from '@/lib/search-apis'
 
 // Supabase configuration
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Register all Community features
