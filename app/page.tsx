@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { AgGridWrapper, AgGridWrapperRef } from '@/components/ui/ag-grid-wrapper';
 import { columnDefsMap, TabId, tabConfigs } from '@/lib/grid-columns';
+import { buildNewsColumnDefs, NEWS_CSV_HEADERS } from '@/lib/news/schema';
 import { sampleDataMap, getEmptyData } from '@/lib/sample-data';
 import { searchWithGoogle } from '@/lib/search-apis';
 
@@ -318,8 +319,15 @@ function ResultsPanel({
   onRelevanceChange,
   getRowClass
 }: ResultsPanelProps) {
-  const columnDefs = useMemo(() => columnDefsMap[activeTab], [activeTab]);
-  const rowData = useMemo(() => results[activeTab] || [], [results, activeTab]);
+  const newsColumnDefs = useMemo(() => buildNewsColumnDefs(NEWS_CSV_HEADERS), []);
+  const columnDefs = useMemo(
+    () => (activeTab === 'news' ? newsColumnDefs : columnDefsMap[activeTab]),
+    [activeTab, newsColumnDefs]
+  );
+  const rowData = useMemo(
+    () => (activeTab === 'news' ? [] : results[activeTab] || []),
+    [results, activeTab]
+  );
   
   const handleMatch = () => {
     if (selectedRows.length === 0) return;
