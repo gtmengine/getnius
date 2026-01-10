@@ -240,3 +240,129 @@
   color: #ffffff;
   margin-top: 2px;
 }
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* AG Grid custom loading overlay */
+.ag-theme-quartz .ag-overlay-loading-center {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.ag-theme-quartz .ag-overlay-no-rows-center {
+  background-color: transparent;
+  padding: 48px;
+}
+
+/* Smoother row animations */
+.ag-theme-quartz .ag-row-animation {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+/* Better focus states for accessibility */
+.ag-theme-quartz .ag-checkbox-input:focus + .ag-checkbox-input-wrapper {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Pagination styling */
+.ag-theme-quartz .ag-paging-panel {
+  border-top: 1px solid rgb(229 231 235);
+  padding: 12px 16px;
+  background: rgb(249 250 251);
+}
+
+.ag-theme-quartz .ag-paging-button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin: 0 2px;
+}
+
+.ag-theme-quartz .ag-paging-button:hover:not(.ag-disabled) {
+  background-color: rgb(229 234 254);
+}
+
+/* Column resize handle */
+.ag-theme-quartz .ag-header-cell-resize {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ag-theme-quartz .ag-header-cell:hover .ag-header-cell-resize {
+  opacity: 1;
+}
+
+/* Better action button styling in cells */
+.ag-theme-quartz .ag-cell button {
+  transition: all 0.15s ease;
+}
+
+/* Pinned column shadow */
+.ag-theme-quartz .ag-pinned-left-cols-container {
+  box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.08);
+}
+
+.ag-theme-quartz .ag-pinned-right-cols-container {
+  box-shadow: -2px 0 4px -2px rgba(0, 0, 0, 0.08);
+}
+
+/* Row background colors for match status */
+.row-match {
+  background-color: #f0fdf4 !important; /* light green */
+}
+
+.row-not-match {
+  background-color: #fef2f2 !important; /* light red */
+}
+
+/* Custom slider styling */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e5e7eb;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: all 0.15s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
+.slider::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: all 0.15s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
