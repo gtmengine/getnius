@@ -27,6 +27,7 @@ import { columnDefsMap, TabId, tabConfigs } from '@/lib/grid-columns';
 import { buildNewsColumnDefs, NEWS_CSV_HEADERS } from '@/lib/news/schema';
 import { sampleDataMap, getEmptyData } from '@/lib/sample-data';
 import { searchWithGoogle } from '@/lib/search-apis';
+import { useNewsSearch } from '@/hooks/useNewsSearch';
 
 // Icon map for tabs
 const iconMap = {
@@ -296,20 +297,29 @@ interface ResultsPanelProps {
   activeTab: TabId;
   results: Record<TabId, any[]>;
   isSearching: boolean;
+  newsLoading: boolean;
+  newsError: string | null;
   selectedRows: any[];
   onSelectionChanged: (rows: any[]) => void;
-  gridRef: React.RefObject<AgGridWrapperRef>;
+  gridRef: React.RefObject<AgGridWrapperRef | null>;
   significanceMin: number;
   relevanceMin: number;
   onSignificanceChange: (value: number) => void;
   onRelevanceChange: (value: number) => void;
   getRowClass?: (params: any) => string;
+  onMatch: () => void;
+  onNotMatch: () => void;
+  onFindLookalikes: () => void;
+  onEnrich: () => void;
+  onDelete: () => void;
 }
 
 function ResultsPanel({
   activeTab,
   results,
   isSearching,
+  newsLoading,
+  newsError,
   selectedRows,
   onSelectionChanged,
   gridRef,
@@ -317,7 +327,12 @@ function ResultsPanel({
   relevanceMin,
   onSignificanceChange,
   onRelevanceChange,
-  getRowClass
+  getRowClass,
+  onMatch,
+  onNotMatch,
+  onFindLookalikes,
+  onEnrich,
+  onDelete
 }: ResultsPanelProps) {
   const newsColumnDefs = useMemo(() => buildNewsColumnDefs(NEWS_CSV_HEADERS), []);
   const columnDefs = useMemo(
@@ -325,70 +340,9 @@ function ResultsPanel({
     [activeTab, newsColumnDefs]
   );
   const rowData = useMemo(
-    () => (activeTab === 'news' ? [] : results[activeTab] || []),
+    () => (activeTab === 'news' ? results.news || [] : results[activeTab] || []),
     [results, activeTab]
   );
-  
-  const handleMatch = () => {
-    if (selectedRows.length === 0) return;
-
-    setResults(prevResults => {
-      const newResults = { ...prevResults };
-      const tabData = [...newResults[activeTab]];
-
-      // Update matchStatus for selected rows
-      selectedRows.forEach(selectedRow => {
-        const rowIndex = tabData.findIndex(row => row.id === selectedRow.id);
-        if (rowIndex !== -1) {
-          tabData[rowIndex] = { ...tabData[rowIndex], matchStatus: 'match' as const };
-        }
-      });
-
-      newResults[activeTab] = tabData;
-      return newResults;
-    });
-
-    // Clear selection after operation
-    setSelectedRows([]);
-  };
-
-  const handleNotMatch = () => {
-    if (selectedRows.length === 0) return;
-
-    setResults(prevResults => {
-      const newResults = { ...prevResults };
-      const tabData = [...newResults[activeTab]];
-
-      // Update matchStatus for selected rows
-      selectedRows.forEach(selectedRow => {
-        const rowIndex = tabData.findIndex(row => row.id === selectedRow.id);
-        if (rowIndex !== -1) {
-          tabData[rowIndex] = { ...tabData[rowIndex], matchStatus: 'not-match' as const };
-        }
-      });
-
-      newResults[activeTab] = tabData;
-      return newResults;
-    });
-
-    // Clear selection after operation
-    setSelectedRows([]);
-  };
-  
-  const handleFindLookalikes = () => {
-    console.log('Finding lookalikes for:', selectedRows);
-    // Implement lookalikes logic
-  };
-  
-  const handleEnrich = () => {
-    console.log('Enriching:', selectedRows);
-    // Implement enrich logic
-  };
-  
-  const handleDelete = () => {
-    console.log('Deleting:', selectedRows);
-    // Implement delete logic
-  };
   
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -396,11 +350,11 @@ function ResultsPanel({
       <div className="px-4 border-b border-gray-100">
         <ResultsToolbar
           selectedCount={selectedRows.length}
-          onMatch={handleMatch}
-          onNotMatch={handleNotMatch}
-          onFindLookalikes={handleFindLookalikes}
-          onEnrich={handleEnrich}
-          onDelete={handleDelete}
+          onMatch={onMatch}
+          onNotMatch={onNotMatch}
+          onFindLookalikes={onFindLookalikes}
+          onEnrich={onEnrich}
+          onDelete={onDelete}
           activeTab={activeTab}
           significanceMin={significanceMin}
           relevanceMin={relevanceMin}
@@ -411,6 +365,14 @@ function ResultsPanel({
       
       {/* Grid */}
       <div className="relative">
+        {activeTab === 'news' && newsError && (
+          <div className="px-4 py-2 bg-red-50 border-b border-red-100 text-red-700 text-sm">
+            {newsError}
+          </div>
+        )}
+        {activeTab === 'news' && newsLoading && (
+          <div className="px-4 py-2 text-xs text-gray-500">Loading...</div>
+        )}
         <AgGridWrapper
           ref={gridRef}
           rowData={rowData}
@@ -441,6 +403,7 @@ export default function Page() {
   const [results, setResults] = useState<Record<TabId, any[]>>(getEmptyData());
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const { rows: newsRows, loading: newsLoading, error: newsError, runSearch: runNewsSearch } = useNewsSearch();
 
   // News filter states
   const [significanceMin, setSignificanceMin] = useState<number>(() => {
@@ -459,7 +422,7 @@ export default function Page() {
   });
 
   const gridRef = useRef<AgGridWrapperRef>(null);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Persist slider values to localStorage
   useEffect(() => {
@@ -472,11 +435,12 @@ export default function Page() {
 
   // Filter news data based on slider values
   const filteredNews = useMemo(() => {
-    return results.news.filter(item =>
-      (item.significance_score || 0) >= significanceMin &&
-      (item.relevance_score || 0) >= relevanceMin
-    );
-  }, [results.news, significanceMin, relevanceMin]);
+    return newsRows.filter(item => {
+      const significance = typeof item.significance_score === 'number' ? item.significance_score : typeof item.significance_score === 'string' ? parseFloat(item.significance_score) || 0 : 0;
+      const relevance = typeof item.relevance_score === 'number' ? item.relevance_score : typeof item.relevance_score === 'string' ? parseFloat(item.relevance_score) || 0 : 0;
+      return significance >= significanceMin && relevance >= relevanceMin;
+    });
+  }, [newsRows, significanceMin, relevanceMin]);
 
   // Create filtered results object
   const filteredResults = useMemo(() => ({
@@ -509,6 +473,12 @@ export default function Page() {
   // Search handler
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
+
+    if (activeTab === 'news') {
+      setSelectedRows([]);
+      await runNewsSearch(searchQuery, 25);
+      return;
+    }
     
     setIsSearching(true);
     setError(null);
@@ -566,7 +536,7 @@ export default function Page() {
     } finally {
       setIsSearching(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, activeTab, runNewsSearch]);
   
   // Tab change handler
   const handleTabChange = useCallback((tab: TabId) => {
@@ -587,6 +557,68 @@ export default function Page() {
   const handleRelevanceChange = useCallback((value: number) => {
     setRelevanceMin(value);
   }, []);
+
+  // Match/Not Match handlers
+  const handleMatch = useCallback(() => {
+    if (selectedRows.length === 0) return;
+
+    setResults(prevResults => {
+      const newResults = { ...prevResults };
+      const tabData = [...newResults[activeTab]];
+
+      // Update matchStatus for selected rows
+      selectedRows.forEach(selectedRow => {
+        const rowIndex = tabData.findIndex(row => row.id === selectedRow.id);
+        if (rowIndex !== -1) {
+          tabData[rowIndex] = { ...tabData[rowIndex], matchStatus: 'match' as const };
+        }
+      });
+
+      newResults[activeTab] = tabData;
+      return newResults;
+    });
+
+    // Clear selection after operation
+    setSelectedRows([]);
+  }, [selectedRows, activeTab]);
+
+  const handleNotMatch = useCallback(() => {
+    if (selectedRows.length === 0) return;
+
+    setResults(prevResults => {
+      const newResults = { ...prevResults };
+      const tabData = [...newResults[activeTab]];
+
+      // Update matchStatus for selected rows
+      selectedRows.forEach(selectedRow => {
+        const rowIndex = tabData.findIndex(row => row.id === selectedRow.id);
+        if (rowIndex !== -1) {
+          tabData[rowIndex] = { ...tabData[rowIndex], matchStatus: 'not-match' as const };
+        }
+      });
+
+      newResults[activeTab] = tabData;
+      return newResults;
+    });
+
+    // Clear selection after operation
+    setSelectedRows([]);
+  }, [selectedRows, activeTab]);
+
+  const handleFindLookalikes = useCallback(() => {
+    console.log('Finding lookalikes for:', selectedRows);
+    // Implement lookalikes logic
+  }, [selectedRows]);
+
+  const handleEnrich = useCallback(() => {
+    console.log('Enriching:', selectedRows);
+    // Implement enrich logic
+  }, [selectedRows]);
+
+  const handleDelete = useCallback(() => {
+    console.log('Deleting:', selectedRows);
+    // Implement delete logic
+  }, [selectedRows]);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
@@ -631,7 +663,7 @@ export default function Page() {
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           onSearch={handleSearch}
-          isSearching={isSearching}
+          isSearching={activeTab === 'news' ? newsLoading : isSearching}
         />
         
         {/* Category Tabs */}
@@ -654,7 +686,9 @@ export default function Page() {
         <ResultsPanel
           activeTab={activeTab}
           results={filteredResults}
-          isSearching={isSearching}
+          isSearching={activeTab === 'news' ? newsLoading : isSearching}
+          newsLoading={newsLoading}
+          newsError={newsError}
           selectedRows={selectedRows}
           onSelectionChanged={handleSelectionChanged}
           gridRef={gridRef}
@@ -663,6 +697,11 @@ export default function Page() {
           onSignificanceChange={handleSignificanceChange}
           onRelevanceChange={handleRelevanceChange}
           getRowClass={getRowClass}
+          onMatch={handleMatch}
+          onNotMatch={handleNotMatch}
+          onFindLookalikes={handleFindLookalikes}
+          onEnrich={handleEnrich}
+          onDelete={handleDelete}
         />
       </main>
     </div>
