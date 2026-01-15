@@ -141,6 +141,19 @@ export const sampleSignals = [
   { id: '5', signalType: 'Product', company: 'Swvl', date: '2026-01-01', confidence: 'Medium', source: 'https://theverge.com/swvl-product', description: 'Launching corporate shuttle service' },
   { id: '6', signalType: 'Partnership', company: 'Fawry', date: '2025-12-30', confidence: 'High', source: 'https://fintechnews.com/fawry', description: 'Strategic partnership with Visa for card issuance' },
   { id: '7', signalType: 'Layoff', company: 'TechStartup XYZ', date: '2025-12-28', confidence: 'High', source: 'https://layoffs.fyi/xyz', description: '20% workforce reduction announced' },
+  { id: '8', signalType: 'Job Changes', company: 'Noon', date: '2025-12-27', confidence: 'High', source: 'https://linkedin.com/noon-cfo', description: 'CFO resignation announced, new finance director appointed from Google' },
+  { id: '9', signalType: 'Job Changes', company: 'Careem', date: '2025-12-26', confidence: 'Medium', source: 'https://techcrunch.com/careem-hiring', description: 'VP of Engineering hired from Uber, Head of Product moved to Meta' },
+  { id: '10', signalType: 'Job Changes', company: 'Anghami', date: '2025-12-25', confidence: 'High', source: 'https://reuters.com/anghami-executives', description: 'Three senior executives left for competitor Spotify, mass hiring spree announced' },
+  { id: '11', signalType: 'Job Change', person: 'Sarah Johnson', company: 'Tech Corp - Innovation Labs', date: '2025-12-28', confidence: 'High', source: 'https://linkedin.com/sarah-johnson', description: 'Promoted to VP of Engineering' },
+  { id: '12', signalType: 'New Hire', person: 'Michael Chen', company: 'Startup Inc', date: '2025-12-27', confidence: 'Medium', source: 'https://techcrunch.com/michael-chen', description: 'Joined as CTO' },
+  { id: '13', signalType: 'Funding Round', person: 'David Martinez', company: 'Growth Ventures', date: '2025-12-26', confidence: 'High', source: 'https://crunchbase.com/growth-ventures', description: 'Series B - $50M raised' },
+  { id: '14', signalType: 'Social Post', person: 'Emma Williams', company: 'Digital Media Co', date: '2025-12-25', confidence: 'Low', source: 'https://twitter.com/emma-williams', description: 'Product launch announcement' },
+  { id: '15', signalType: 'Job Change', person: 'James Anderson', company: 'Enterprise Solutions', date: '2025-12-24', confidence: 'High', source: 'https://linkedin.com/james-anderson', description: 'New role: Head of Sales' },
+  { id: '16', signalType: 'News Mention', person: 'Lisa Brown', company: 'BioTech Labs', date: '2025-12-23', confidence: 'Medium', source: 'https://biotech-news.com/lisa-brown', description: 'Featured in industry publication' },
+  { id: '17', signalType: 'Company Event', person: 'Robert Taylor', company: 'Cloud Services', date: '2025-12-22', confidence: 'High', source: 'https://tech-conference.com/robert-taylor', description: 'Speaking at tech conference' },
+  { id: '18', signalType: 'Job Change', person: 'Jennifer Lee', company: 'Finance Corp', date: '2025-12-21', confidence: 'High', source: 'https://linkedin.com/jennifer-lee', description: 'Moved to CFO position' },
+  { id: '19', signalType: 'New Hire', person: 'William Davis', company: 'AI Solutions', date: '2025-12-20', confidence: 'Medium', source: 'https://ai-news.com/william-davis', description: 'Joined as ML Engineer' },
+  { id: '20', signalType: 'Social Post', person: 'Amanda Garcia', company: 'Marketing Pro', date: '2025-12-19', confidence: 'Low', source: 'https://linkedin.com/amanda-garcia', description: 'Company milestone celebration' },
 ];
 
 // Sample Market Reports Data

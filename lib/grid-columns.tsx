@@ -1,6 +1,80 @@
+import React, { useState, useEffect, useRef } from 'react';
 import { ColDef } from 'ag-grid-community';
 
 export type TabId = 'companies' | 'people' | 'news' | 'signals' | 'market' | 'patents' | 'research-papers';
+
+// Editable Header Component for AG Grid
+const EditableHeaderComponent = (props: any) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(props.displayName || '');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setValue(props.displayName || '');
+  }, [props.displayName]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (props.isEditable) {
+      setIsEditing(true);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (value.trim() && value !== (props.displayName || '')) {
+      props.onChange?.(value.trim());
+    } else {
+      setValue(props.displayName || '');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleBlur();
+    } else if (e.key === 'Escape') {
+      setValue(props.displayName || '');
+      setIsEditing(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value);
+  };
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        className="w-full px-2 py-1 text-sm font-medium bg-white border border-indigo-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        style={{ minWidth: '120px' }}
+        onClick={(e) => e.stopPropagation()}
+      />
+    );
+  }
+
+  return (
+    <div
+      onClick={handleClick}
+      className={`font-medium text-sm ${props.isEditable ? 'cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors' : ''}`}
+      title={props.isEditable ? 'Click to edit column name' : props.displayName}
+    >
+      {props.displayName || ''}
+    </div>
+  );
+};
 
 // Status badge renderer
 const StatusRenderer = (params: any) => {
@@ -87,6 +161,13 @@ const SignalTypeRenderer = (params: any) => {
     'Partnership': 'bg-indigo-100 text-indigo-700',
     'Expansion': 'bg-teal-100 text-teal-700',
     'Layoff': 'bg-red-100 text-red-700',
+    'Job Changes': 'bg-amber-100 text-amber-700',
+    'Job Change': 'bg-amber-100 text-amber-700',
+    'New Hire': 'bg-cyan-100 text-cyan-700',
+    'Funding Round': 'bg-emerald-100 text-emerald-700',
+    'Social Post': 'bg-pink-100 text-pink-700',
+    'News Mention': 'bg-violet-100 text-violet-700',
+    'Company Event': 'bg-slate-100 text-slate-700',
   };
   const colorClass = typeColors[type] || 'bg-gray-100 text-gray-600';
   
@@ -101,11 +182,11 @@ const SignalTypeRenderer = (params: any) => {
 const LinkRenderer = (params: any) => {
   const url = params.value;
   if (!url) return <span className="text-gray-400">N/A</span>;
-
+  
   return (
-    <a
-      href={url}
-      target="_blank"
+    <a 
+      href={url} 
+      target="_blank" 
       rel="noopener noreferrer"
       className="text-indigo-600 hover:text-indigo-800 hover:underline text-sm truncate block"
       onClick={(e) => e.stopPropagation()}
@@ -149,24 +230,28 @@ export const companiesColumnDefs: ColDef[] = [
     flex: 2,
     minWidth: 280,
     cellRenderer: CompanyRenderer,
+    editable: true,
     pinned: 'left',
   },
   {
     field: 'location',
     headerName: 'Location',
     width: 150,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'founded',
     headerName: 'Founded',
     width: 100,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'employees',
     headerName: 'Employees',
     width: 110,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -185,6 +270,7 @@ export const companiesColumnDefs: ColDef[] = [
     field: 'revenue',
     headerName: 'Revenue',
     width: 120,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -217,6 +303,7 @@ export const peopleColumnDefs: ColDef[] = [
     headerName: 'Name',
     flex: 1,
     minWidth: 180,
+    editable: true,
     pinned: 'left',
   },
   {
@@ -224,17 +311,20 @@ export const peopleColumnDefs: ColDef[] = [
     headerName: 'Company',
     flex: 1,
     minWidth: 180,
+    editable: true,
   },
   {
     field: 'role',
     headerName: 'Role',
     flex: 1,
     minWidth: 180,
+    editable: true,
   },
   {
     field: 'location',
     headerName: 'Location',
     width: 150,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -242,6 +332,7 @@ export const peopleColumnDefs: ColDef[] = [
     headerName: 'Email',
     flex: 1,
     minWidth: 220,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -270,28 +361,44 @@ export const peopleColumnDefs: ColDef[] = [
 // Column definitions for News tab
 export const newsColumnDefs: ColDef[] = [
   {
+    field: 'selection',
+    headerName: 'Select',
+    width: 80,
+    checkboxSelection: true,
+    headerCheckboxSelection: true,
+    pinned: 'left',
+    suppressMenu: true,
+    suppressSorting: true,
+    suppressFilter: true,
+    cellStyle: { textAlign: 'center' },
+  },
+  {
     field: 'title',
     headerName: 'Title',
     flex: 2,
     minWidth: 300,
-    pinned: 'left',
+    editable: true,
+    pinned: false,
   },
   {
     field: 'source',
     headerName: 'Source',
     width: 140,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'date',
     headerName: 'Date',
     width: 120,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'company',
     headerName: 'Company',
     width: 160,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -305,6 +412,7 @@ export const newsColumnDefs: ColDef[] = [
     headerName: 'Summary',
     flex: 2,
     minWidth: 300,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -342,15 +450,24 @@ export const signalsColumnDefs: ColDef[] = [
     pinned: 'left',
   },
   {
+    field: 'person',
+    headerName: 'Person',
+    width: 140,
+    editable: true,
+    valueFormatter: (params) => params.value || 'N/A',
+  },
+  {
     field: 'company',
     headerName: 'Company',
     flex: 1,
     minWidth: 180,
+    editable: true,
   },
   {
     field: 'date',
     headerName: 'Date',
     width: 120,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -371,6 +488,7 @@ export const signalsColumnDefs: ColDef[] = [
     headerName: 'Description',
     flex: 2,
     minWidth: 250,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -391,36 +509,42 @@ export const marketColumnDefs: ColDef[] = [
     headerName: 'Report Title',
     flex: 2,
     minWidth: 300,
+    editable: true,
     pinned: 'left',
   },
   {
     field: 'publisher',
     headerName: 'Publisher',
     width: 160,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'date',
     headerName: 'Date',
     width: 120,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'region',
     headerName: 'Region',
     width: 140,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'category',
     headerName: 'Category',
     width: 160,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'pages',
     headerName: 'Pages',
     width: 80,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -441,6 +565,7 @@ export const patentsColumnDefs: ColDef[] = [
     headerName: 'Title',
     flex: 2,
     minWidth: 320,
+    editable: true,
     pinned: 'left',
   },
   {
@@ -458,6 +583,7 @@ export const patentsColumnDefs: ColDef[] = [
     headerName: 'Inventor/Author',
     flex: 1,
     minWidth: 160,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -465,12 +591,14 @@ export const patentsColumnDefs: ColDef[] = [
     headerName: 'Company',
     flex: 1,
     minWidth: 180,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'dateFiled',
     headerName: 'Date Filed',
     width: 120,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -497,6 +625,7 @@ export const researchPapersColumnDefs: ColDef[] = [
     headerName: 'Title',
     flex: 2,
     minWidth: 320,
+    editable: true,
     pinned: 'left',
   },
   {
@@ -504,6 +633,7 @@ export const researchPapersColumnDefs: ColDef[] = [
     headerName: 'Authors',
     flex: 1,
     minWidth: 180,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -511,24 +641,28 @@ export const researchPapersColumnDefs: ColDef[] = [
     headerName: 'Journal/Conference',
     flex: 1,
     minWidth: 180,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'publicationDate',
     headerName: 'Publication Date',
     width: 140,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'citations',
     headerName: 'Citations',
     width: 100,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
     field: 'field',
     headerName: 'Field',
     width: 120,
+    editable: true,
     valueFormatter: (params) => params.value || 'N/A',
   },
   {
@@ -543,6 +677,8 @@ export const researchPapersColumnDefs: ColDef[] = [
 ];
 
 // Map of all column definitions by tab
+export { EditableHeaderComponent };
+
 export const columnDefsMap: Record<TabId, ColDef[]> = {
   companies: companiesColumnDefs,
   people: peopleColumnDefs,

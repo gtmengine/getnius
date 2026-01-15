@@ -36,14 +36,14 @@ export interface AgGridWrapperProps {
   columnDefs: ColDef[];
   onRowClick?: (data: any) => void;
   onSelectionChanged?: (selectedRows: any[]) => void;
+  onCellValueChanged?: (event: any) => void;
+  onColumnHeaderDoubleClick?: (columnField: string, currentName: string) => void;
   className?: string;
   height?: string;
   rowSelection?: 'single' | 'multiple';
   checkboxSelection?: boolean;
   loading?: boolean;
   emptyMessage?: string;
-  pagination?: boolean;
-  paginationPageSize?: number;
   getRowClass?: (params: any) => string;
 }
 
@@ -59,14 +59,14 @@ export const AgGridWrapper = forwardRef<AgGridWrapperRef, AgGridWrapperProps>(({
   columnDefs,
   onRowClick,
   onSelectionChanged,
+  onCellValueChanged,
+  onColumnHeaderDoubleClick,
   className = "",
   height = "60vh",
   rowSelection = "multiple",
   checkboxSelection = true,
   loading = false,
   emptyMessage = "No results to display",
-  pagination = true,
-  paginationPageSize = 20,
   getRowClass,
 }, ref) => {
   const gridRef = useRef<AgGridReact>(null);
@@ -94,6 +94,24 @@ export const AgGridWrapper = forwardRef<AgGridWrapperRef, AgGridWrapperProps>(({
       onSelectionChanged(selectedRows);
     }
   }, [onSelectionChanged]);
+
+  const handleCellValueChanged = useCallback((event: any) => {
+    if (onCellValueChanged) {
+      onCellValueChanged(event);
+    }
+  }, [onCellValueChanged]);
+
+  const handleColumnHeaderClicked = useCallback((event: any) => {
+    if (onColumnHeaderDoubleClick && event.column) {
+      // For now, make all header clicks trigger the edit dialog
+      // In a real app, you might want to distinguish between single and double clicks
+      const columnField = event.column.getColId();
+      const currentName = event.column.getColDef().headerName || event.column.getColDef().field || '';
+
+      // For now, allow editing all columns for testing
+      onColumnHeaderDoubleClick(columnField, currentName);
+    }
+  }, [onColumnHeaderDoubleClick]);
 
   const defaultColDef = useMemo<ColDef>(() => ({
     sortable: true,
@@ -142,7 +160,7 @@ export const AgGridWrapper = forwardRef<AgGridWrapperRef, AgGridWrapperProps>(({
   }, [emptyMessage]);
 
   return (
-    <div className={className} style={{ height, width: '100%' }}>
+    <div className={`ag-theme-quartz ${className}`} style={{ height, width: '100%' }}>
       <AgGridReact
         ref={gridRef}
         theme={customTheme}
@@ -151,12 +169,11 @@ export const AgGridWrapper = forwardRef<AgGridWrapperRef, AgGridWrapperProps>(({
         onGridReady={onGridReady}
         onRowClicked={onRowClicked}
         onSelectionChanged={handleSelectionChanged}
+        onCellValueChanged={handleCellValueChanged}
+        onColumnHeaderClicked={handleColumnHeaderClicked}
         animateRows={true}
         rowSelection={rowSelectionConfig}
         defaultColDef={defaultColDef}
-        pagination={pagination}
-        paginationPageSize={paginationPageSize}
-        paginationPageSizeSelector={[10, 20, 50, 100]}
         loadingOverlayComponent={loadingOverlayComponent}
         noRowsOverlayComponent={noRowsOverlayComponent}
         loading={loading}
