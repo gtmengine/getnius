@@ -39,13 +39,68 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+const baseButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "0.5rem",
+  borderRadius: "0.5rem",
+  fontWeight: 600,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "transparent",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  textTransform: "none",
+}
+
+const sizeFallbacks: Record<
+  NonNullable<ButtonProps["size"]>,
+  React.CSSProperties
+> = {
+  default: { height: 40, padding: "0 1rem", fontSize: "0.95rem" },
+  sm: { height: 36, padding: "0 0.85rem", borderRadius: "0.4rem", fontSize: "0.85rem" },
+  lg: { height: 44, padding: "0 1.5rem", fontSize: "1rem" },
+  icon: { height: 40, width: 40, padding: 0 },
+}
+
+const variantFallbacks: Record<
+  NonNullable<ButtonProps["variant"]>,
+  React.CSSProperties
+> = {
+  default: { backgroundColor: "#1d4ed8", color: "#fff" },
+  destructive: { backgroundColor: "#dc2626", color: "#fff" },
+  outline: {
+    backgroundColor: "#fff",
+    color: "#0f172a",
+    borderColor: "#d0d5dd",
+  },
+  secondary: { backgroundColor: "#e2e8f0", color: "#0f172a" },
+  ghost: { backgroundColor: "transparent", color: "#0f172a" },
+  link: {
+    backgroundColor: "transparent",
+    color: "#1d4ed8",
+    borderColor: "transparent",
+    textDecoration: "underline",
+  },
+}
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant = "default", size = "default", style, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+
+    const fallbackStyle: React.CSSProperties = {
+      ...baseButtonStyle,
+      ...sizeFallbacks[size],
+      ...variantFallbacks[variant],
+      ...style,
+    }
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        style={fallbackStyle}
         {...props}
       />
     )

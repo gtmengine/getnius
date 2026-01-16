@@ -42,13 +42,6 @@ async function searchAlternativeSources(query: string) {
   const sampleResults = generateSampleCompanies(query)
   companies.push(...sampleResults)
 
-  // Ensure we always return some results
-  if (companies.length === 0) {
-    console.log("No companies found, generating generic results")
-    const genericResults = generateGenericCompanies(query)
-    companies.push(...genericResults)
-  }
-
   return companies.slice(0, 15) // Limit results
 }
 
@@ -287,70 +280,6 @@ function generateSampleCompanies(query: string) {
       location: "Boston, MA",
       industry: "Technology",
       founded: "2018",
-      email: undefined,
-      phone: undefined,
-      logo: undefined,
-      relevance: null,
-      status: "pending" as const,
-      comment: "",
-      enriched: false,
-      source: "alternative" as const,
-    },
-  ]
-}
-
-// Generate generic companies when no specific matches are found
-function generateGenericCompanies(query: string) {
-  const timestamp = Date.now()
-  return [
-    {
-      id: `generic_1_${timestamp}`,
-      name: `${query.charAt(0).toUpperCase() + query.slice(1)} Solutions Inc.`,
-      description: `Leading provider of ${query} solutions and services`,
-      website: `https://${query.toLowerCase().replace(/\s+/g, '')}.com`,
-      employees: "11-50",
-      funding: "$3M",
-      location: "San Francisco, CA",
-      industry: "Technology",
-      founded: "2021",
-      email: undefined,
-      phone: undefined,
-      logo: undefined,
-      relevance: null,
-      status: "pending" as const,
-      comment: "",
-      enriched: false,
-      source: "alternative" as const,
-    },
-    {
-      id: `generic_2_${timestamp}`,
-      name: `${query.charAt(0).toUpperCase() + query.slice(1)} Technologies`,
-      description: `Innovative ${query} platform for modern businesses`,
-      website: `https://${query.toLowerCase().replace(/\s+/g, '')}tech.com`,
-      employees: "51-200",
-      funding: "$8M",
-      location: "Austin, TX",
-      industry: "Technology",
-      founded: "2020",
-      email: undefined,
-      phone: undefined,
-      logo: undefined,
-      relevance: null,
-      status: "pending" as const,
-      comment: "",
-      enriched: false,
-      source: "alternative" as const,
-    },
-    {
-      id: `generic_3_${timestamp}`,
-      name: `${query.charAt(0).toUpperCase() + query.slice(1)} Labs`,
-      description: `Cutting-edge ${query} research and development`,
-      website: `https://${query.toLowerCase().replace(/\s+/g, '')}labs.com`,
-      employees: "1-10",
-      funding: "$1M",
-      location: "Boston, MA",
-      industry: "Technology",
-      founded: "2022",
       email: undefined,
       phone: undefined,
       logo: undefined,

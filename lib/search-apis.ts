@@ -17,35 +17,13 @@ export interface Company {
   status: "pending" | "validated" | "enriched"
   comment?: string
   enriched: boolean
-  source: "firecrawl" | "google" | "exa" | "alternative"
+  source: "firecrawl" | "google" | "exa" | "alternative" | "extruct"
 }
 
 export interface SearchSuggestion {
   text: string
   type: "industry" | "technology" | "location" | "company_type" | "keyword"
   category: string
-}
-
-// Alternative search API integration (primary method)
-export async function searchWithAlternative(query: string): Promise<Company[]> {
-  try {
-    const response = await fetch("/api/search/alternative", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    })
-
-    if (!response.ok) {
-      console.error("Alternative search failed:", response.status)
-      return []
-    }
-
-    const data = await response.json()
-    return data.companies || []
-  } catch (error) {
-    console.error("Alternative search error:", error)
-    return []
-  }
 }
 
 // Firecrawl API integration
@@ -58,14 +36,43 @@ export async function searchWithFirecrawl(query: string): Promise<Company[]> {
     })
 
     if (!response.ok) {
-      console.error("Firecrawl search failed:", response.status)
-      return []
+      console.error("Firecrawl search failed, trying alternative...")
+      // Try alternative search
+      const altResponse = await fetch("/api/search/alternative", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      })
+
+      if (altResponse.ok) {
+        const altData = await altResponse.json()
+        return altData.companies || []
+      }
+
+      throw new Error("Both Firecrawl and alternative search failed")
     }
 
     const data = await response.json()
     return data.companies || []
   } catch (error) {
     console.error("Firecrawl search error:", error)
+
+    // Final fallback - try alternative search
+    try {
+      const altResponse = await fetch("/api/search/alternative", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      })
+
+      if (altResponse.ok) {
+        const altData = await altResponse.json()
+        return altData.companies || []
+      }
+    } catch (altError) {
+      console.error("Alternative search also failed:", altError)
+    }
+
     return []
   }
 }
@@ -80,14 +87,33 @@ export async function searchWithGoogle(query: string): Promise<Company[]> {
     })
 
     if (!response.ok) {
-      console.error("Google search failed:", response.status)
-      return []
+      const errorData = await response.json().catch(() => ({}))
+      const errorMessage = errorData.error || "Google search failed"
+      throw new Error(errorMessage)
     }
 
     const data = await response.json()
     return data.companies || []
   } catch (error) {
     console.error("Google search error:", error)
+
+    // Try alternative search as fallback if Google fails
+    console.log("Falling back to alternative search...")
+    try {
+      const altResponse = await fetch("/api/search/alternative", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      })
+
+      if (altResponse.ok) {
+        const altData = await altResponse.json()
+        return altData.companies || []
+      }
+    } catch (altError) {
+      console.error("Alternative search fallback also failed:", altError)
+    }
+
     return []
   }
 }
@@ -101,15 +127,53 @@ export async function searchWithExa(query: string): Promise<Company[]> {
       body: JSON.stringify({ query }),
     })
 
-    if (!response.ok) {
-      console.error("Exa search failed:", response.status)
-      return []
-    }
+    if (!response.ok) throw new Error("Exa search failed")
 
     const data = await response.json()
     return data.companies || []
   } catch (error) {
     console.error("Exa search error:", error)
+    return []
+  }
+}
+
+// Extruct AI integration
+export async function searchWithExtruct(query: string): Promise<Company[]> {
+  try {
+    const response = await fetch("/api/extruct/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      const errorMessage = errorData.error || "Extruct AI search failed"
+      throw new Error(errorMessage)
+    }
+
+    const data = await response.json()
+    return data.companies || []
+  } catch (error) {
+    console.error("Extruct AI search error:", error)
+
+    // Try alternative search as fallback if Extruct AI fails
+    console.log("Falling back to alternative search...")
+    try {
+      const altResponse = await fetch("/api/search/alternative", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      })
+
+      if (altResponse.ok) {
+        const altData = await altResponse.json()
+        return altData.companies || []
+      }
+    } catch (altError) {
+      console.error("Alternative search fallback also failed:", altError)
+    }
+
     return []
   }
 }
@@ -123,10 +187,7 @@ export async function getSmartSuggestions(query: string): Promise<SearchSuggesti
       body: JSON.stringify({ query }),
     })
 
-    if (!response.ok) {
-      console.error("Suggestions failed:", response.status)
-      return []
-    }
+    if (!response.ok) throw new Error("Suggestions failed")
 
     const data = await response.json()
     return data.suggestions || []
@@ -136,56 +197,39 @@ export async function getSmartSuggestions(query: string): Promise<SearchSuggesti
   }
 }
 
-// Combined search across all APIs with improved error handling
+// Combined search across all APIs
 export async function searchCompanies(query: string): Promise<Company[]> {
-  console.log("Starting search for:", query)
-
-  // Only use Alternative search in development
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      const alternativeResults = await searchWithAlternative(query)
-      if (alternativeResults && alternativeResults.length > 0) {
-        console.log("Alternative search returned", alternativeResults.length, "results")
-        return alternativeResults
-      }
-    } catch (error) {
-      console.error("Alternative search failed:", error)
-    }
-  }
-
-  // If in production or if alternative search fails in development, try other APIs
-  console.log("Trying other search APIs...")
-  const [exaResults] = await Promise.allSettled([
-    // searchWithFirecrawl(query),
-    // searchWithGoogle(query),
+  const [firecrawlResults, googleResults, exaResults, extructResults] = await Promise.allSettled([
+    searchWithFirecrawl(query),
+    searchWithGoogle(query),
     searchWithExa(query),
+    searchWithExtruct(query),
   ])
 
   const allCompanies: Company[] = []
 
-  // if (firecrawlResults.status === "fulfilled" && firecrawlResults.value.length > 0) {
-  //   allCompanies.push(...firecrawlResults.value)
-  // }
+  if (firecrawlResults.status === "fulfilled") {
+    allCompanies.push(...firecrawlResults.value)
+  }
 
-  // if (googleResults.status === "fulfilled" && googleResults.value.length > 0) {
-  //   allCompanies.push(...googleResults.value)
-  // }
+  if (googleResults.status === "fulfilled") {
+    allCompanies.push(...googleResults.value)
+  }
 
-  if (exaResults.status === "fulfilled" && exaResults.value.length > 0) {
+  if (exaResults.status === "fulfilled") {
     allCompanies.push(...exaResults.value)
+  }
+
+  if (extructResults.status === "fulfilled") {
+    allCompanies.push(...extructResults.value)
   }
 
   // Remove duplicates based on website or name
   const uniqueCompanies = allCompanies.filter(
     (company, index, self) =>
       index ===
-      self.findIndex((c) => {
-        if (c.website && company.website && c.website === company.website) return true
-        if (c.name.toLowerCase() === company.name.toLowerCase()) return true
-        return false
-      }),
+      self.findIndex((c) => c.website === company.website || c.name.toLowerCase() === company.name.toLowerCase()),
   )
 
-  console.log("Final search results:", uniqueCompanies.length, "companies")
   return uniqueCompanies
 }

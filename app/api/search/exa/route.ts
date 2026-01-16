@@ -8,13 +8,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 })
     }
 
-    // Check if API key is available
-    if (!process.env.EXA_API_KEY) {
-      console.log("Exa API key not found, returning empty results")
-      return NextResponse.json({ companies: [] })
-    }
-
-    // Exa API call - use numResults if provided, otherwise default to 10
+    // Exa API call
     const exaResponse = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: {

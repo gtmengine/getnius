@@ -345,7 +345,7 @@ function extractEmail(content: string): string | undefined {
 function extractPhone(content: string): string | undefined {
   if (!content) return undefined
 
-  const phonePattern = /\+?\d+?[-.\(\s]?\d{3}[-.\)\s]?\d{3}[-.\s]?\d{4}/
+  const phonePattern = /(\+?1?[-.\s]?[0-9]{3}[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})/
   const match = content.match(phonePattern)
   return match ? match[1] : undefined
 }

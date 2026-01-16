@@ -9,9 +9,6 @@ export async function POST(request: NextRequest) {
     }
 
     const suggestions = await generateSmartSuggestions(query.toLowerCase())
-    
-    console.log(`Generated ${suggestions.length} suggestions for query: "${query}"`)
-    console.log("Suggestions:", suggestions.map(s => s.text))
 
     return NextResponse.json({ suggestions })
   } catch (error) {

@@ -8,20 +8,57 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 })
     }
 
-    // Check if API keys are available
-    if (!process.env.GOOGLE_API_KEY || !process.env.GOOGLE_SEARCH_ENGINE_ID) {
-      console.log("Google API keys not found, returning empty results")
-      return NextResponse.json({ companies: [] })
+    // Check if Google API credentials are configured
+    const apiKey = process.env.GOOGLE_API_KEY
+    const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID
+
+    if (!apiKey || !searchEngineId) {
+      console.warn("Google API credentials not configured, falling back to alternative search")
+      // Fallback to alternative search
+      const altResponse = await fetch(`${request.nextUrl.origin}/api/search/alternative`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      })
+
+      if (altResponse.ok) {
+        const altData = await altResponse.json()
+        return NextResponse.json({ companies: altData.companies || [] })
+      }
+
+      return NextResponse.json({
+        error: "Google API credentials not configured. Please set GOOGLE_API_KEY and GOOGLE_SEARCH_ENGINE_ID environment variables.",
+        companies: []
+      }, { status: 503 })
     }
 
     // Google Custom Search API call
     const searchQuery = `${query} company startup business site:linkedin.com OR site:crunchbase.com OR site:angel.co`
     const googleResponse = await fetch(
-      `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_API_KEY}&cx=${process.env.GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(searchQuery)}&num=10`,
+      `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}&num=10`,
     )
 
     if (!googleResponse.ok) {
-      throw new Error(`Google API error: ${googleResponse.status}`)
+      const errorText = await googleResponse.text()
+      console.error("Google API error:", googleResponse.status, errorText)
+
+      // Try fallback search on API failure
+      try {
+        const altResponse = await fetch(`${request.nextUrl.origin}/api/search/alternative`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        })
+
+        if (altResponse.ok) {
+          const altData = await altResponse.json()
+          return NextResponse.json({ companies: altData.companies || [] })
+        }
+      } catch (fallbackError) {
+        console.error("Fallback search also failed:", fallbackError)
+      }
+
+      throw new Error(`Google API error: ${googleResponse.status} - ${errorText}`)
     }
 
     const googleData = await googleResponse.json()

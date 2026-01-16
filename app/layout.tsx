@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { SessionProvider } from '@/components/providers/session-provider'
-import { Toaster } from '@/components/ui/toaster'
+import { ThemeProvider } from '@/components/theme-provider'
 
 export const metadata: Metadata = {
-  title: 'Getnius',
-  description: 'Getnius — a market research intelligence platform'
+  title: 'GETNI.US - Market Research Platform',
+  description: 'Market research platform for the modern age',
+  generator: 'v0.dev',
 }
 
 export default function RootLayout({
@@ -14,12 +14,16 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body>
-        <SessionProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning className="bg-white min-h-screen">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
-          <Toaster />
-        </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

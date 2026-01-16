@@ -125,18 +125,12 @@ interface SearchExamplesProps {
 }
 
 export function SearchExamples({ onExampleSelect, className = "" }: SearchExamplesProps) {
-  const [activeFilter, setActiveFilter] = React.useState<string>("all");
-  
   const categories = [
-    { id: "trending", name: "TRENDING", examples: searchExamples.filter((e) => e.category === "trending") },
-    { id: "popular", name: "POPULAR", examples: searchExamples.filter((e) => e.category === "popular") },
-    { id: "specific", name: "SPECIFIC", examples: searchExamples.filter((e) => e.category === "specific") },
-    { id: "industry", name: "INDUSTRY", examples: searchExamples.filter((e) => e.category === "industry") },
+    { id: "trending", name: "Trending", examples: searchExamples.filter((e) => e.category === "trending") },
+    { id: "popular", name: "Popular", examples: searchExamples.filter((e) => e.category === "popular") },
+    { id: "specific", name: "Specific", examples: searchExamples.filter((e) => e.category === "specific") },
+    { id: "industry", name: "Industry", examples: searchExamples.filter((e) => e.category === "industry") },
   ]
-
-  const filteredExamples = activeFilter === "all" 
-    ? searchExamples.slice(0, 6)
-    : searchExamples.filter(example => example.category === activeFilter);
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -145,35 +139,8 @@ export function SearchExamples({ onExampleSelect, className = "" }: SearchExampl
         <p className="text-sm text-gray-600">Click any example to start your search</p>
       </div>
 
-      {/* Filter Buttons */}
-      <div className="flex flex-wrap gap-2 justify-center">
-        <button
-          onClick={() => setActiveFilter("all")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeFilter === "all"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          ALL
-        </button>
-        {categories.map((category) => (
-          <button
-            key={category.id}
-            onClick={() => setActiveFilter(category.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeFilter === category.id
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {category.name}
-          </button>
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredExamples.map((example) => {
+        {searchExamples.slice(0, 6).map((example) => {
           const Icon = example.icon
           return (
             <button
@@ -201,6 +168,14 @@ export function SearchExamples({ onExampleSelect, className = "" }: SearchExampl
       </div>
 
 
+      {/* Quick access categories */}
+      <div className="flex flex-wrap gap-2 justify-center">
+        {categories.map((category) => (
+          <div key={category.id} className="text-center">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{category.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
