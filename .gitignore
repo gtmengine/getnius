@@ -31,3 +31,7 @@ pnpm-lock.yaml
 .cursor.zip
 .autopilot.json
 market-research-platform (1).zip
+
+.DS_Store
+app/.DS_Store
+components/.DS_Store
